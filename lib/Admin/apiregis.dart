@@ -9,7 +9,7 @@ class ApiService {
     required String observaciones,
   }) async {
     final uri = Uri.parse(
-      'http://localhost:5000/api/evaluacionip'
+      'https://backendproyecto-producción-4a8d.up.railway.app/api/evaluacionip'
       '?usuario_id=$usuarioId'
       '&nivel_riesgo=$nivelRiesgo'
       '&estado_emocional=$estadoEmocional'
