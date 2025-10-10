@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://backendproyecto-producción-4a8d.up.railway.app/api';
 
   // Recuperar token desde SharedPreferences
   static Future<String?> _getToken() async {
