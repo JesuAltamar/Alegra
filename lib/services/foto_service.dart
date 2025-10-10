@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class FotoService {
-  static const String baseUrl = 'http://backendproyecto-producción-4a8d.up.railway.app/api';
+  static const String baseUrl = 'https://backendproyecto-producción-4a8d.up.railway.app/api';
 
   static Future<Map<String, dynamic>> subirFoto({
     required String token,

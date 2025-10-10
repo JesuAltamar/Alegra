@@ -2,8 +2,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 // URL base de tu API
-const String _baseUrlAdmin = 'http://backendproyecto-producción-4a8d.up.railway.app/api/admin';
-const String _baseUrlJuegos = 'http://backendproyecto-producción-4a8d.up.railway.app/api/juegos';
+const String _baseUrlAdmin = 'https://backendproyecto-producción-4a8d.up.railway.app/api/admin';
+const String _baseUrlJuegos = 'https://backendproyecto-producción-4a8d.up.railway.app/api/juegos';
 
 // ----------- Estadísticas globales -----------
 Future<Map<String, dynamic>> fetchAdminStats() async {

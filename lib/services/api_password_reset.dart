@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class PasswordResetService {
   // ⚠️ CAMBIAR ESTA URL PARA QUE COINCIDA CON TUS OTROS SERVICIOS
-  static const String baseUrl = 'http://backendproyecto-producción-4a8d.up.railway.app/api/password';
+  static const String baseUrl = 'https://backendproyecto-producción-4a8d.up.railway.app/api/password';
   
   // Solicitar reset de contraseña
   static Future<Map<String, dynamic>> requestPasswordReset(String email) async {
