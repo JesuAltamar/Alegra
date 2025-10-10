@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiChatService {
-  static const String baseUrl = 'http://backendproyecto-producción-4a8d.up.railway.app:5000';
+  static const String baseUrl = 'http://backendproyecto-producción-4a8d.up.railway.app';
   
   /// Enviar mensaje al chat
   Future<Map<String, dynamic>> sendMessage({
