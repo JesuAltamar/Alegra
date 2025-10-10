@@ -34885,7 +34885,7 @@ if(a.charCodeAt(s)!==47)return q
 return b+3},
 aYv(a,b,c,d,e){var s=0,r=A.H(t.P),q,p,o,n,m,l,k,j
 var $async$aYv=A.D(function(f,g){if(f===1)return A.E(g,r)
-while(true)switch(s){case 0:m=A.c_("http://localhost:5000/api/usuariosip",0,null)
+while(true)switch(s){case 0:m=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/usuariosip",0,null)
 l=t.N
 k=A.a2(["Content-Type","application/json"],l,l)
 s=3
@@ -34903,7 +34903,7 @@ break}case 1:return A.F(q,r)}})
 return A.G($async$aYv,r)},
 P4(a,b){var s=0,r=A.H(t.P),q,p,o,n,m,l,k,j,i
 var $async$P4=A.D(function(c,d){if(c===1)return A.E(d,r)
-while(true)switch(s){case 0:l=A.c_("http://localhost:5000/api/login",0,null)
+while(true)switch(s){case 0:l=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/login",0,null)
 k=t.N
 j=A.a2(["Content-Type","application/json"],k,k)
 s=3
@@ -34935,7 +34935,7 @@ bhL(a){var s=0,r=A.H(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$atm=A.D(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
 A.bo("\ud83d\udce4 Solicitando reset para: "+a)
-k=A.c_("http://localhost:5000/api/password/request-reset",0,null)
+k=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/password/request-reset",0,null)
 j=t.N
 i=A.a2(["Content-Type","application/json","Accept","application/json"],j,j)
 s=7
@@ -34977,7 +34977,7 @@ bhN(a){var s=0,r=A.H(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$ato=A.D(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
 A.bo("\ud83d\udd0d Verificando token: "+B.e.a7(a,0,20)+"...")
-k=A.c_("http://localhost:5000/api/password/verify-token",0,null)
+k=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/password/verify-token",0,null)
 j=t.N
 i=A.a2(["Content-Type","application/json","Accept","application/json"],j,j)
 s=7
@@ -35019,7 +35019,7 @@ bhM(a,b){var s=0,r=A.H(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$atn=A.D(function(c,d){if(c===1){o.push(d)
 s=p}while(true)switch(s){case 0:p=4
 A.bo("\ud83d\udd04 Restableciendo contrase\xf1a con token: "+B.e.a7(a,0,20)+"...")
-k=A.c_("http://localhost:5000/api/password/reset",0,null)
+k=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/password/reset",0,null)
 j=t.N
 i=A.a2(["Content-Type","application/json","Accept","application/json"],j,j)
 s=7
@@ -35127,7 +35127,7 @@ bfX(a,b){var s=0,r=A.H(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$alu=A.D(function(c,d){if(c===1){o.push(d)
 s=p}while(true)switch(s){case 0:p=4
 n=B.ti.gNn().ft(a)
-k=A.c_("http://localhost:5000/api/foto/upload",0,null)
+k=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/foto/upload",0,null)
 j=t.N
 i=A.a2(["Content-Type","application/json","Authorization","Bearer "+b],j,j)
 s=7
@@ -35158,7 +35158,7 @@ return A.G($async$alu,r)},
 aXT(){var s=0,r=A.H(t.b5),q,p
 var $async$aXT=A.D(function(a,b){if(a===1)return A.E(b,r)
 while(true)switch(s){case 0:s=3
-return A.v(A.hH(A.c_("http://localhost:5000/api/admin/actividades-recientes",0,null),null),$async$aXT)
+return A.v(A.hH(A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/admin/actividades-recientes",0,null),null),$async$aXT)
 case 3:p=b
 if(p.b===200){q=A.eW(B.a0.f9(0,A.cB(A.cA(p.e)).bS(0,p.w),null),!0,t.P)
 s=1
@@ -35168,7 +35168,7 @@ return A.G($async$aXT,r)},
 aYx(a){var s=0,r=A.H(t.b5),q,p
 var $async$aYx=A.D(function(b,c){if(b===1)return A.E(c,r)
 while(true)switch(s){case 0:s=3
-return A.v(A.hH(A.c_("http://localhost:5000/api/admin/actividades-usuario?nombre="+a,0,null),null),$async$aYx)
+return A.v(A.hH(A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/admin/actividades-usuario?nombre="+a,0,null),null),$async$aYx)
 case 3:p=c
 if(p.b===200){q=A.eW(B.a0.f9(0,A.cB(A.cA(p.e)).bS(0,p.w),null),!0,t.P)
 s=1
@@ -35177,7 +35177,7 @@ case 1:return A.F(q,r)}})
 return A.G($async$aYx,r)},
 aXO(){var s=0,r=A.H(t.P),q,p=2,o=[],n,m,l,k,j,i,h
 var $async$aXO=A.D(function(a,b){if(a===1){o.push(b)
-s=p}while(true)switch(s){case 0:i="http://localhost:5000/api/admin/estadisticas"
+s=p}while(true)switch(s){case 0:i="https://backendproyecto-producción-4a8d.up.railway.app/api/admin/estadisticas"
 p=4
 s=7
 return A.v(A.hH(A.c_(i,0,null),null),$async$aXO)
@@ -35205,7 +35205,7 @@ case 2:return A.E(o.at(-1),r)}})
 return A.G($async$aXO,r)},
 aXU(){var s=0,r=A.H(t._P),q,p=2,o=[],n,m,l,k,j,i
 var $async$aXU=A.D(function(a,b){if(a===1){o.push(b)
-s=p}while(true)switch(s){case 0:j="http://localhost:5000/api/admin/usuarios-activos-semanal"
+s=p}while(true)switch(s){case 0:j="https://backendproyecto-producción-4a8d.up.railway.app/api/admin/usuarios-activos-semanal"
 p=4
 s=7
 return A.v(A.hH(A.c_(j,0,null),null),$async$aXU)
@@ -35233,7 +35233,7 @@ return A.G($async$aXU,r)},
 aY3(a,b){return A.bpC(a,b)},
 bpC(a,b){var s=0,r=A.H(t.bo),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$aY3=A.D(function(c,d){if(c===1){o.push(d)
-s=p}while(true)switch(s){case 0:g="http://localhost:5000/api/juegos/iniciar"
+s=p}while(true)switch(s){case 0:g="https://backendproyecto-producción-4a8d.up.railway.app/api/juegos/iniciar"
 p=4
 k=A.c_(g,0,null)
 j=t.N
@@ -35265,7 +35265,7 @@ return A.G($async$aY3,r)},
 aXV(a){return A.bpg(a)},
 bpg(a){var s=0,r=A.H(t.H),q=1,p=[],o,n,m,l,k,j,i,h
 var $async$aXV=A.D(function(b,c){if(b===1){p.push(c)
-s=q}while(true)switch(s){case 0:i="http://localhost:5000/api/juegos/finalizar"
+s=q}while(true)switch(s){case 0:i="https://backendproyecto-producción-4a8d.up.railway.app/api/juegos/finalizar"
 q=3
 m=A.c_(i,0,null)
 l=t.N
@@ -35301,7 +35301,7 @@ J.ef(n,"no_leidas",String(d))
 J.ef(n,"limit",B.n.m(a))
 if(b!=null)J.ef(n,"tipo",b)
 m=n
-l=A.c_("http://localhost:5000/api/admin/notificaciones",0,null).a5h(0,m)
+l=A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/admin/notificaciones",0,null).a5h(0,m)
 A.bo("\ud83d\udd0d Obteniendo notificaciones: "+A.l(l))
 s=7
 return A.v(A.hH(l,null),$async$afw)
@@ -35343,7 +35343,7 @@ afv(){var s=0,r=A.H(t.S),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$afv=A.D(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:p=4
 s=7
-return A.v(A.hH(A.c_("http://localhost:5000/api/admin/notificaciones?no_leidas=false&limit=5",0,null),null),$async$afv)
+return A.v(A.hH(A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/admin/notificaciones?no_leidas=false&limit=5",0,null),null),$async$afv)
 case 7:n=b
 if(n.b===200){j=n
 m=B.a0.f9(0,A.cB(A.cA(j.e)).bS(0,j.w),null)
@@ -35410,7 +35410,7 @@ var $async$afy=A.D(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:p=4
 l=t.N
 s=7
-return A.v(A.aeN(A.c_("http://localhost:5000/api/admin/notificaciones/marcar-todas-leidas",0,null),null,A.a2(["Content-Type","application/json"],l,l)),$async$afy)
+return A.v(A.aeN(A.c_("https://backendproyecto-producción-4a8d.up.railway.app/api/admin/notificaciones/marcar-todas-leidas",0,null),null,A.a2(["Content-Type","application/json"],l,l)),$async$afy)
 case 7:n=b
 if(n.b===200){A.bo("\u2705 Todas las notificaciones marcadas como le\xeddas")
 q=!0
