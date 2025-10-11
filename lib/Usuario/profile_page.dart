@@ -70,7 +70,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (token != null) {
         final response = await http.get(
-          Uri.parse('https://backendproyecto-producción-4a8d.up.railway.app/api/usuario/perfil'),
+          Uri.parse('https://backendproyecto-produccion-4a8d.up.railway.app/api/usuario/perfil'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -168,7 +168,7 @@ class _ProfilePageState extends State<ProfilePage> {
       return Image.memory(_webImage!, fit: BoxFit.cover);
     } else if (_avatarUrl != null) {
       return Image.network(
-        'https://backendproyecto-producción-4a8d.up.railway.app$_avatarUrl',
+        'https://backendproyecto-produccion-4a8d.up.railway.app$_avatarUrl',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
       );

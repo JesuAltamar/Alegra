@@ -5,7 +5,7 @@ import 'evaluacion_model.dart';
 
 Future<List<Evaluacion>> fetchEvaluaciones() async {
   final response = await http.get(
-    Uri.parse('https://backendproyecto-producción-4a8d.up.railway.app/api/evaluaciones'),
+    Uri.parse('https://backendproyecto-produccion-4a8d.up.railway.app/api/evaluaciones'),
   );
 
   if (response.statusCode == 200) {

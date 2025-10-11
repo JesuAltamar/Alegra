@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<Map<String, dynamic>> loginUsuario(String correo, String password) async {
-  final url = Uri.parse("https://backendproyecto-producción-4a8d.up.railway.app/api/login");
+  final url = Uri.parse("https://backendproyecto-produccion-4a8d.up.railway.app/api/login");
 
   final response = await http.post(
     url,

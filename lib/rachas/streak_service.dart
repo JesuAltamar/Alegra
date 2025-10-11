@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:pro9/rachas/streak_models.dart';
 
 class StreakService {
-  final String baseUrl = 'https://backendproyecto-producción-4a8d.up.railway.app/api'; // Cambia a tu IP/URL
+  final String baseUrl = 'https://backendproyecto-produccion-4a8d.up.railway.app/api'; // Cambia a tu IP/URL
 
   // Obtener racha actual del usuario
   Future<StreakStats> obtenerRacha(int userId) async {

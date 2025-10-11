@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiNotificaciones {
-  static const String baseUrl = 'https://backendproyecto-producción-4a8d.up.railway.app';
+  static const String baseUrl = 'https://backendproyecto-produccion-4a8d.up.railway.app';
 
   /// Obtener todas las notificaciones
   static Future<Map<String, dynamic>> getNotificaciones({

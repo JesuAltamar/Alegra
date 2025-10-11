@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 // URL base de tu API
-const String _baseUrlAdmin = 'https://backendproyecto-producción-4a8d.up.railway.app/api/admin';
+const String _baseUrlAdmin = 'https://backendproyecto-produccion-4a8d.up.railway.app/api/admin';
 const String _baseUrlJuegos = 'https://backendproyecto-producción-4a8d.up.railway.app/api/juegos';
 
 // ----------- Estadísticas globales -----------

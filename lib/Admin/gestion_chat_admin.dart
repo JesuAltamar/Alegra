@@ -57,7 +57,7 @@ class _GestionChatAdminState extends State<GestionChatAdmin> {
   Future<void> _cargarSentimientos() async {
     try {
       final response = await http.get(
-        Uri.parse('https://backendproyecto-producción-4a8d.up.railway.app/api/admin/chat/sentimientos?dias=30'),
+        Uri.parse('https://backendproyecto-production-4a8d.up.railway.app/api/admin/chat/sentimientos?dias=30'),
       );
       
       if (response.statusCode == 200) {
@@ -76,7 +76,7 @@ class _GestionChatAdminState extends State<GestionChatAdmin> {
   Future<void> _cargarTemas() async {
     try {
       final response = await http.get(
-        Uri.parse('https://backendproyecto-producción-4a8d.up.railway.app/api/admin/chat/temas?limit=5'),
+        Uri.parse('https://backendproyecto-produccion-4a8d.up.railway.app/api/admin/chat/temas?limit=5'),
       );
       
       if (response.statusCode == 200) {
@@ -95,7 +95,7 @@ class _GestionChatAdminState extends State<GestionChatAdmin> {
   Future<void> _cargarTendencias() async {
     try {
       final response = await http.get(
-        Uri.parse('https://backendproyecto-producción-4a8d.up.railway.app/api/admin/chat/tendencias'),
+        Uri.parse('https://backendproyecto-produccion-4a8d.up.railway.app/api/admin/chat/tendencias'),
       );
       
       if (response.statusCode == 200) {

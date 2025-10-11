@@ -650,7 +650,7 @@ Widget _buildResetFormContent() {
         ),
       ),
 
-      // NUEVO: Info de debugging (remover en producción)
+    
       if (const bool.fromEnvironment('dart.vm.product') == false) ...[
         SizedBox(height: isSmallScreen ? 16 : 20),
         Container(
