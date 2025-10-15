@@ -129,7 +129,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           final dayTasks = await ApiService.getTareas(fecha: fecha);
           allTasks.addAll(dayTasks);
         } catch (e) {
-          // Ignorar errores de dÃ­as individuales
+          // Ignorar errores de días individuales
         }
       }
 
@@ -173,7 +173,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
             ),
             title: const Text("Eliminar Tarea"),
             content: const Text(
-              "Estas seguro? Esto tambienn cancelara el recordatorio si existe.",
+              "¿Estás seguro? Esto también cancelará el recordatorio si existe.",
             ),
             actions: [
               TextButton(
@@ -210,7 +210,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  // MÃ©todos auxiliares para UI
+  // Métodos auxiliares para UI
   Color _getEventColor(List events) {
     if (events.isEmpty) return Colors.grey;
     bool hasCompleted = events.any(
@@ -285,34 +285,40 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   }
 
   Widget _statBox(String label, int value, Color color, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          "$value",
-          style: TextStyle(
-            fontSize: 24,
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmall = constraints.maxWidth < 100;
+        return Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isSmall ? 8 : 12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: isSmall ? 20 : 24),
+            ),
+            SizedBox(height: isSmall ? 4 : 8),
+            Text(
+              "$value",
+              style: TextStyle(
+                fontSize: isSmall ? 20 : 24,
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isSmall ? 10 : 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -375,17 +381,27 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   @override
   Widget build(BuildContext context) {
     final fechaTexto = DateFormat("d 'de' MMMM", "es_ES").format(_selectedDate);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1024;
+    final isTablet = screenWidth > 600 && screenWidth <= 1024;
+    final isMobile = screenWidth <= 600;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
-              "Lista de Tareas",
-              style: TextStyle(fontWeight: FontWeight.w600),
+            Flexible(
+              child: Text(
+                "Lista de Tareas",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: isMobile ? 18 : 20,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -423,205 +439,269 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
-      body: Row(
-        children: [
-          // Calendario + estadÃ­sticas
-          Expanded(
-            flex: 1,
-            child: Column(
+      body: isDesktop || isTablet
+          ? Row(
               children: [
-                Container(
-                  margin: const EdgeInsets.all(20),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.blue[50] ?? Colors.blue.shade50,
-                        Colors.white,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withOpacity(0.1),
-                        blurRadius: 20,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _statBox(
-                        "Completadas",
-                        _getStatValue("completadas"),
-                        Colors.green,
-                        Icons.check_circle,
-                      ),
-                      _statBox(
-                        "Total",
-                        _getStatValue("total"),
-                        Colors.blue,
-                        Icons.list_alt,
-                      ),
-                      _statBox(
-                        "Recordatorios",
-                        _getStatValue("recordatorios"),
-                        Colors.amber,
-                        Icons.notifications,
-                      ),
-                    ],
-                  ),
-                ),
+                // Calendario + estadísticas
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: TableCalendar(
-                      locale: 'es_ES',
-                      firstDay: DateTime.utc(2020, 1, 1),
-                      lastDay: DateTime.utc(2030, 12, 31),
-                      focusedDay: _focusedDay,
-                      selectedDayPredicate:
-                          (day) => isSameDay(_selectedDate, day),
-                      onDaySelected: (selectedDay, focusedDay) {
-                        setState(() {
-                          _selectedDate = selectedDay;
-                          _focusedDay = focusedDay;
-                        });
-                        _loadData();
-                      },
-                      onPageChanged: (focusedDay) {
-                        setState(() {
-                          _focusedDay = focusedDay;
-                        });
-                        _loadAllTasks();
-                      },
-                      eventLoader: (day) => _getEventsForDay(day),
-                      calendarBuilders: CalendarBuilders(
-                        markerBuilder: (context, day, events) {
-                          if (events.isNotEmpty) {
-                            return Positioned(
-                              right: 1,
-                              bottom: 1,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _getEventColor(events),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            );
-                          }
-                          return null;
-                        },
-                      ),
-                      calendarStyle: CalendarStyle(
-                        selectedDecoration: BoxDecoration(
-                          color: Colors.blue[400] ?? Colors.blue,
-                          shape: BoxShape.circle,
-                        ),
-                        todayDecoration: BoxDecoration(
-                          color: Colors.orange[400] ?? Colors.orange,
-                          shape: BoxShape.circle,
-                        ),
-                        weekendTextStyle: TextStyle(
-                          color: Colors.red[400] ?? Colors.red,
-                        ),
-                        outsideDaysVisible: false,
-                        markersMaxCount: 1,
-                      ),
-                      headerStyle: HeaderStyle(
-                        formatButtonVisible: false,
-                        titleCentered: true,
-                        titleTextStyle: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        leftChevronIcon: Icon(
-                          Icons.chevron_left,
-                          color: Colors.blue[400] ?? Colors.blue,
-                        ),
-                        rightChevronIcon: Icon(
-                          Icons.chevron_right,
-                          color: Colors.blue[400] ?? Colors.blue,
-                        ),
-                      ),
-                    ),
-                  ),
+                  flex: isDesktop ? 1 : 2,
+                  child: _buildCalendarSection(isDesktop, isTablet, isMobile),
                 ),
-                const SizedBox(height: 20),
+                // Lista de tareas
+                Expanded(
+                  flex: isDesktop ? 1 : 3,
+                  child: _buildTasksSection(fechaTexto, isDesktop, isTablet, isMobile),
+                ),
               ],
-            ),
-          ),
-          // Lista de tareas
-          Expanded(
-            flex: 1,
-            child: Container(
-              margin: const EdgeInsets.all(20),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
+            )
+          : SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.event_note,
-                        color: Colors.blue[600] ?? Colors.blue,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        "Tareas para $fechaTexto",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Expanded(child: _buildTasksList()),
+                  _buildCalendarSection(isDesktop, isTablet, isMobile),
+                  _buildTasksSection(fechaTexto, isDesktop, isTablet, isMobile),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: _buildFloatingActionButton(isMobile),
     );
   }
 
-  Widget _buildTasksList() {
+  Widget _buildCalendarSection(bool isDesktop, bool isTablet, bool isMobile) {
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.all(isMobile ? 12 : 20),
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue[50] ?? Colors.blue.shade50,
+                Colors.white,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withOpacity(0.1),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: isMobile
+              ? Column(
+                  children: [
+                    _statBox(
+                      "Completadas",
+                      _getStatValue("completadas"),
+                      Colors.green,
+                      Icons.check_circle,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          child: _statBox(
+                            "Total",
+                            _getStatValue("total"),
+                            Colors.blue,
+                            Icons.list_alt,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _statBox(
+                            "Recordatorios",
+                            _getStatValue("recordatorios"),
+                            Colors.amber,
+                            Icons.notifications,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statBox(
+                      "Completadas",
+                      _getStatValue("completadas"),
+                      Colors.green,
+                      Icons.check_circle,
+                    ),
+                    _statBox(
+                      "Total",
+                      _getStatValue("total"),
+                      Colors.blue,
+                      Icons.list_alt,
+                    ),
+                    _statBox(
+                      "Recordatorios",
+                      _getStatValue("recordatorios"),
+                      Colors.amber,
+                      Icons.notifications,
+                    ),
+                  ],
+                ),
+        ),
+        Flexible(
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
+            constraints: BoxConstraints(
+              maxHeight: isMobile ? 400 : double.infinity,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: TableCalendar(
+              locale: 'es_ES',
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDate = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+                _loadData();
+              },
+              onPageChanged: (focusedDay) {
+                setState(() {
+                  _focusedDay = focusedDay;
+                });
+                _loadAllTasks();
+              },
+              eventLoader: (day) => _getEventsForDay(day),
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, day, events) {
+                  if (events.isNotEmpty) {
+                    return Positioned(
+                      right: 1,
+                      bottom: 1,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _getEventColor(events),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    );
+                  }
+                  return null;
+                },
+              ),
+              calendarStyle: CalendarStyle(
+                selectedDecoration: BoxDecoration(
+                  color: Colors.blue[400] ?? Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: Colors.orange[400] ?? Colors.orange,
+                  shape: BoxShape.circle,
+                ),
+                weekendTextStyle: TextStyle(
+                  color: Colors.red[400] ?? Colors.red,
+                ),
+                outsideDaysVisible: false,
+                markersMaxCount: 1,
+                cellMargin: EdgeInsets.all(isMobile ? 2 : 4),
+              ),
+              headerStyle: HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                leftChevronIcon: Icon(
+                  Icons.chevron_left,
+                  color: Colors.blue[400] ?? Colors.blue,
+                ),
+                rightChevronIcon: Icon(
+                  Icons.chevron_right,
+                  color: Colors.blue[400] ?? Colors.blue,
+                ),
+              ),
+              daysOfWeekStyle: DaysOfWeekStyle(
+                weekdayStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+                weekendStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: isMobile ? 12 : 20),
+      ],
+    );
+  }
+
+  Widget _buildTasksSection(String fechaTexto, bool isDesktop, bool isTablet, bool isMobile) {
+    return Container(
+      margin: EdgeInsets.all(isMobile ? 12 : 20),
+      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      constraints: BoxConstraints(
+        minHeight: isMobile ? 300 : 400,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.event_note,
+                color: Colors.blue[600] ?? Colors.blue,
+                size: isMobile ? 20 : 24,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Tareas para $fechaTexto",
+                  style: TextStyle(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(child: _buildTasksList(isMobile)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTasksList(bool isMobile) {
     if (tareas.isEmpty) {
       return Center(
         child: Column(
@@ -629,22 +709,23 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           children: [
             Icon(
               Icons.task_alt,
-              size: 64,
+              size: isMobile ? 48 : 64,
               color: Colors.grey[300] ?? Colors.grey,
             ),
             const SizedBox(height: 16),
             Text(
               "No hay tareas para esta fecha",
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isMobile ? 14 : 16,
                 color: Colors.grey[500] ?? Colors.grey,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              "Â¡Agrega una nueva tarea!",
+              "¡Agrega una nueva tarea!",
               style: TextStyle(
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 color: Colors.grey[400] ?? Colors.grey,
               ),
             ),
@@ -655,11 +736,11 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
     return ListView.builder(
       itemCount: tareas.length,
-      itemBuilder: (context, i) => _buildTaskItem(i),
+      itemBuilder: (context, i) => _buildTaskItem(i, isMobile),
     );
   }
 
-  Widget _buildTaskItem(int index) {
+  Widget _buildTaskItem(int index, bool isMobile) {
     try {
       if (index >= tareas.length) return const SizedBox.shrink();
 
@@ -668,7 +749,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
       final completada =
           (t["estado"]?.toString() ?? "").toLowerCase() == "completada";
-      final titulo = t["titulo"]?.toString() ?? "(Sin titulo)";
+      final titulo = t["titulo"]?.toString() ?? "(Sin título)";
       final descripcion = t["descripcion"]?.toString() ?? "";
       final categoria = t["categoria"]?.toString() ?? "personal";
       final prioridad = t["prioridad"]?.toString() ?? "media";
@@ -677,7 +758,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       final emailRecordatorio = t["email_recordatorio"]?.toString();
 
       return Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.centerLeft,
@@ -711,11 +792,11 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
           child: Row(
             children: [
               Transform.scale(
-                scale: 1.2,
+                scale: isMobile ? 1.0 : 1.2,
                 child: Checkbox(
                   value: completada,
                   activeColor: Colors.green[400] ?? Colors.green,
@@ -725,7 +806,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   onChanged: (val) => _toggleCompletar(id, val ?? false),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isMobile ? 8 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -736,7 +817,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                           child: Text(
                             titulo,
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: isMobile ? 16 : 18,
                               fontWeight: FontWeight.w600,
                               color:
                                   completada
@@ -758,7 +839,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                             ),
                             child: Icon(
                               Icons.notifications_active,
-                              size: 16,
+                              size: isMobile ? 14 : 16,
                               color: Colors.amber[700],
                             ),
                           ),
@@ -770,23 +851,26 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                       Text(
                         descripcion,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isMobile ? 12 : 14,
                           color:
                               completada
                                   ? Colors.grey[500] ?? Colors.grey
                                   : Colors.grey[700] ?? Colors.grey,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    Row(
+                    SizedBox(height: isMobile ? 8 : 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         _chip(
                           categoria,
                           _getCategoryColor(categoria),
                           _getCategoryIcon(categoria),
                         ),
-                        const SizedBox(width: 8),
                         _chip(
                           prioridad,
                           _getPriorityColor(prioridad),
@@ -794,7 +878,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                         ),
                         if (recordatorioActivo &&
                             emailRecordatorio != null) ...[
-                          const SizedBox(width: 8),
                           _chip(
                             emailRecordatorio.contains('@')
                                 ? emailRecordatorio
@@ -826,10 +909,10 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   ],
                 ),
               ),
-              // BotÃ³n de editar
+              // Botón de editar
               IconButton(
                 icon: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(isMobile ? 6 : 8),
                   decoration: BoxDecoration(
                     color: Colors.blue[50] ?? Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(8),
@@ -837,7 +920,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   child: Icon(
                     Icons.edit_outlined,
                     color: Colors.blue[400] ?? Colors.blue,
-                    size: 20,
+                    size: isMobile ? 18 : 20,
                   ),
                 ),
                 onPressed: () {
@@ -846,10 +929,10 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   }
                 },
               ),
-              // BotÃ³n de eliminar
+              // Botón de eliminar
               IconButton(
                 icon: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(isMobile ? 6 : 8),
                   decoration: BoxDecoration(
                     color: Colors.red[50] ?? Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
@@ -857,7 +940,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   child: Icon(
                     Icons.delete_outline,
                     color: Colors.red[400] ?? Colors.red,
-                    size: 20,
+                    size: isMobile ? 18 : 20,
                   ),
                 ),
                 onPressed: () {
@@ -876,7 +959,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  Widget _buildFloatingActionButton() {
+  Widget _buildFloatingActionButton(bool isMobile) {
     return ScaleTransition(
       scale: Tween<double>(begin: 1.0, end: 0.8).animate(
         CurvedAnimation(
@@ -889,10 +972,14 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: _mostrarFormularioNuevaTarea,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          "Nueva Tarea",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        icon: Icon(Icons.add, color: Colors.white, size: isMobile ? 20 : 24),
+        label: Text(
+          isMobile ? "Nueva" : "Nueva Tarea",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: isMobile ? 14 : 16,
+          ),
         ),
       ),
     );
@@ -920,8 +1007,12 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final screenHeight = MediaQuery.of(context).size.height;
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isMobile = screenWidth <= 600;
+            
             return Container(
-              height: MediaQuery.of(context).size.height * 0.9,
+              height: screenHeight * (isMobile ? 0.95 : 0.9),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
@@ -929,8 +1020,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
               child: Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
-                  left: 24,
-                  right: 24,
+                  left: isMobile ? 16 : 24,
+                  right: isMobile ? 16 : 24,
                   top: 20,
                 ),
                 child: Form(
@@ -955,7 +1046,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(isMobile ? 10 : 12),
                             decoration: BoxDecoration(
                               color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(15),
@@ -963,35 +1054,37 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                             child: Icon(
                               Icons.add_task,
                               color: Colors.blue[600],
-                              size: 24,
+                              size: isMobile ? 20 : 24,
                             ),
                           ),
-                          const SizedBox(width: 15),
-                          const Text(
+                          SizedBox(width: isMobile ? 12 : 15),
+                          Text(
                             "Nueva Tarea",
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: isMobile ? 20 : 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
+                      SizedBox(height: isMobile ? 20 : 30),
 
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // TÃ­tulo
+                              // Título
                               _buildFormField(
-                                label: "Titulo",
+                                label: "Título",
                                 icon: Icons.title,
+                                isMobile: isMobile,
                                 child: TextFormField(
-                                  style: const TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: isMobile ? 14 : 16),
                                   decoration: _inputDecoration(
-                                    "Ingresa el titulo de la tarea",
+                                    "Ingresa el título de la tarea",
+                                    isMobile,
                                   ),
                                   validator:
                                       (v) =>
@@ -1001,31 +1094,30 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                   onChanged: (v) => titulo = v,
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: isMobile ? 16 : 20),
 
-                              // DescripciÃ³n
+                              // Descripción
                               _buildFormField(
-                                label: "Descripcion",
+                                label: "Descripción",
                                 icon: Icons.description,
+                                isMobile: isMobile,
                                 child: TextFormField(
-                                  style: const TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: isMobile ? 14 : 16),
                                   maxLines: 3,
                                   decoration: _inputDecoration(
                                     "Describe los detalles (opcional)",
+                                    isMobile,
                                   ),
                                   onChanged: (v) => descripcion = v,
                                 ),
                               ),
-                              const SizedBox(height: 20),
-
-                              // Fecha
-                              // Reemplaza la secciÃ³n problemÃ¡tica en tu archivo (lÃ­neas aproximadamente 785-801)
-                              // Elimina estas lÃ­neas duplicadas y reemplaza con:
+                              SizedBox(height: isMobile ? 16 : 20),
 
                               // Fecha
                               _buildFormField(
                                 label: "Fecha",
                                 icon: Icons.calendar_today,
+                                isMobile: isMobile,
                                 child: InkWell(
                                   onTap: () async {
                                     final pickedDate = await showDatePicker(
@@ -1055,8 +1147,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     }
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isMobile ? 14 : 16,
                                       horizontal: 12,
                                     ),
                                     decoration: BoxDecoration(
@@ -1078,7 +1170,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                             "d 'de' MMMM, yyyy",
                                             "es_ES",
                                           ).format(fecha),
-                                          style: const TextStyle(fontSize: 16),
+                                          style: TextStyle(fontSize: isMobile ? 14 : 16),
                                         ),
                                         const Spacer(),
                                         Icon(
@@ -1090,87 +1182,161 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: isMobile ? 16 : 20),
 
-                              // Prioridad y CategorÃ­a
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildFormField(
-                                      label: "Prioridad",
-                                      icon: Icons.priority_high,
-                                      child: DropdownButtonFormField<String>(
-                                        value: prioridad,
-                                        decoration: _inputDecoration(""),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: "baja",
-                                            child: Text("Baja"),
+                              // Prioridad y Categoría
+                              isMobile
+                                  ? Column(
+                                      children: [
+                                        _buildFormField(
+                                          label: "Prioridad",
+                                          icon: Icons.priority_high,
+                                          isMobile: isMobile,
+                                          child: DropdownButtonFormField<String>(
+                                            value: prioridad,
+                                            decoration: _inputDecoration("", isMobile),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: "baja",
+                                                child: Text("Baja"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "media",
+                                                child: Text("Media"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "alta",
+                                                child: Text("Alta"),
+                                              ),
+                                            ],
+                                            onChanged:
+                                                (v) => setModalState(
+                                                  () => prioridad = v ?? "media",
+                                                ),
                                           ),
-                                          DropdownMenuItem(
-                                            value: "media",
-                                            child: Text("Media"),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildFormField(
+                                          label: "Categoría",
+                                          icon: Icons.category,
+                                          isMobile: isMobile,
+                                          child: DropdownButtonFormField<String>(
+                                            value: categoria,
+                                            decoration: _inputDecoration("", isMobile),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: "personal",
+                                                child: Text("Personal"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "trabajo",
+                                                child: Text("Trabajo"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "salud",
+                                                child: Text("Salud"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "hogar",
+                                                child: Text("Hogar"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "estudio",
+                                                child: Text("Estudio"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "otro",
+                                                child: Text("Otro"),
+                                              ),
+                                            ],
+                                            onChanged:
+                                                (v) => setModalState(
+                                                  () => categoria = v ?? "personal",
+                                                ),
                                           ),
-                                          DropdownMenuItem(
-                                            value: "alta",
-                                            child: Text("Alta"),
-                                          ),
-                                        ],
-                                        onChanged:
-                                            (v) => setModalState(
-                                              () => prioridad = v ?? "media",
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildFormField(
+                                            label: "Prioridad",
+                                            icon: Icons.priority_high,
+                                            isMobile: isMobile,
+                                            child: DropdownButtonFormField<String>(
+                                              value: prioridad,
+                                              decoration: _inputDecoration("", isMobile),
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: "baja",
+                                                  child: Text("Baja"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "media",
+                                                  child: Text("Media"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "alta",
+                                                  child: Text("Alta"),
+                                                ),
+                                              ],
+                                              onChanged:
+                                                  (v) => setModalState(
+                                                    () => prioridad = v ?? "media",
+                                                  ),
                                             ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: _buildFormField(
-                                      label: "Categoria",
-                                      icon: Icons.category,
-                                      child: DropdownButtonFormField<String>(
-                                        value: categoria,
-                                        decoration: _inputDecoration(""),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: "personal",
-                                            child: Text("Personal"),
                                           ),
-                                          DropdownMenuItem(
-                                            value: "trabajo",
-                                            child: Text("Trabajo"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "salud",
-                                            child: Text("Salud"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "hogar",
-                                            child: Text("Hogar"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "estudio",
-                                            child: Text("Estudio"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "otro",
-                                            child: Text("Otro"),
-                                          ),
-                                        ],
-                                        onChanged:
-                                            (v) => setModalState(
-                                              () => categoria = v ?? "personal",
+                                        ),
+                                        const SizedBox(width: 15),
+                                        Expanded(
+                                          child: _buildFormField(
+                                            label: "Categoría",
+                                            icon: Icons.category,
+                                            isMobile: isMobile,
+                                            child: DropdownButtonFormField<String>(
+                                              value: categoria,
+                                              decoration: _inputDecoration("", isMobile),
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: "personal",
+                                                  child: Text("Personal"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "trabajo",
+                                                  child: Text("Trabajo"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "salud",
+                                                  child: Text("Salud"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "hogar",
+                                                  child: Text("Hogar"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "estudio",
+                                                  child: Text("Estudio"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "otro",
+                                                  child: Text("Otro"),
+                                                ),
+                                              ],
+                                              onChanged:
+                                                  (v) => setModalState(
+                                                    () => categoria = v ?? "personal",
+                                                  ),
                                             ),
-                                      ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 30),
+                              SizedBox(height: isMobile ? 20 : 30),
 
-                              // SecciÃ³n de recordatorio por email
+                              // Sección de recordatorio por email
                               Container(
-                                padding: const EdgeInsets.all(20),
+                                padding: EdgeInsets.all(isMobile ? 16 : 20),
                                 decoration: BoxDecoration(
                                   color: Colors.blue[50],
                                   borderRadius: BorderRadius.circular(16),
@@ -1184,17 +1350,18 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                         Icon(
                                           Icons.email,
                                           color: Colors.blue[600],
-                                          size: 20,
+                                          size: isMobile ? 18 : 20,
                                         ),
-                                        const SizedBox(width: 8),
-                                        const Text(
-                                          "Recordatorio por Email",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
+                                        SizedBox(width: isMobile ? 6 : 8),
+                                        Expanded(
+                                          child: Text(
+                                            "Recordatorio por Email",
+                                            style: TextStyle(
+                                              fontSize: isMobile ? 16 : 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                        const Spacer(),
                                         Switch(
                                           value: recordatorioActivo,
                                           activeColor: Colors.blue[600],
@@ -1210,24 +1377,26 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     Text(
                                       "Recibe un email recordatorio completamente gratis",
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: isMobile ? 12 : 14,
                                         color: Colors.grey[600],
                                       ),
                                     ),
 
                                     if (recordatorioActivo) ...[
-                                      const SizedBox(height: 20),
+                                      SizedBox(height: isMobile ? 16 : 20),
 
                                       // Campo de email
                                       _buildFormField(
-                                        label: "Correo electrÃ³nico",
+                                        label: "Correo electrónico",
                                         icon: Icons.email_outlined,
+                                        isMobile: isMobile,
                                         child: TextFormField(
                                           keyboardType:
                                               TextInputType.emailAddress,
-                                          style: const TextStyle(fontSize: 16),
+                                          style: TextStyle(fontSize: isMobile ? 14 : 16),
                                           decoration: _inputDecoration(
                                             "ejemplo@gmail.com",
+                                            isMobile,
                                           ),
                                           validator:
                                               recordatorioActivo
@@ -1237,7 +1406,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                     if (!RegExp(
                                                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                                                     ).hasMatch(v)) {
-                                                      return "Email invÃ¡lido";
+                                                      return "Email inválido";
                                                     }
                                                     return null;
                                                   }
@@ -1252,6 +1421,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       _buildFormField(
                                         label: "Fecha del recordatorio",
                                         icon: Icons.calendar_today,
+                                        isMobile: isMobile,
                                         child: InkWell(
                                           onTap: () async {
                                             final pickedDate =
@@ -1274,8 +1444,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                             }
                                           },
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: isMobile ? 14 : 16,
                                               horizontal: 12,
                                             ),
                                             decoration: BoxDecoration(
@@ -1302,8 +1472,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                         fechaRecordatorio!,
                                                       )
                                                       : "Seleccionar fecha",
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 14 : 16,
                                                   ),
                                                 ),
                                                 const Spacer(),
@@ -1322,6 +1492,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       _buildFormField(
                                         label: "Hora del recordatorio",
                                         icon: Icons.access_time,
+                                        isMobile: isMobile,
                                         child: InkWell(
                                           onTap: () async {
                                             final pickedTime =
@@ -1337,8 +1508,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                             }
                                           },
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: isMobile ? 14 : 16,
                                               horizontal: 12,
                                             ),
                                             decoration: BoxDecoration(
@@ -1359,8 +1530,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                 Text(
                                                   horaRecordatorio ??
                                                       "Seleccionar hora",
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 14 : 16,
                                                   ),
                                                 ),
                                                 const Spacer(),
@@ -1377,75 +1548,140 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 30),
+                              SizedBox(height: isMobile ? 20 : 30),
                             ],
                           ),
                         ),
                       ),
                       // Botones
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: Colors.grey[300] ?? Colors.grey,
+                      isMobile
+                          ? Column(
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.blue[600] ?? Colors.blue,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    onPressed:
+                                        () => _procesarFormularioTarea(
+                                          formKey: formKey,
+                                          esEdicion: false,
+                                          titulo: titulo,
+                                          descripcion: descripcion,
+                                          fecha: fecha,
+                                          prioridad: prioridad,
+                                          categoria: categoria,
+                                          recordatorioActivo: recordatorioActivo,
+                                          emailRecordatorio: emailRecordatorio,
+                                          fechaRecordatorio: fechaRecordatorio,
+                                          horaRecordatorio: horaRecordatorio,
+                                        ),
+                                    child: const Text(
+                                      "Crear Tarea",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text(
-                                "Cancelar",
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Colors.blue[600] ?? Colors.blue,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 2,
-                              ),
-                              onPressed:
-                                  () => _procesarFormularioTarea(
-                                    formKey: formKey,
-                                    esEdicion: false,
-                                    titulo: titulo,
-                                    descripcion: descripcion,
-                                    fecha: fecha,
-                                    prioridad: prioridad,
-                                    categoria: categoria,
-                                    recordatorioActivo: recordatorioActivo,
-                                    emailRecordatorio: emailRecordatorio,
-                                    fechaRecordatorio: fechaRecordatorio,
-                                    horaRecordatorio: horaRecordatorio,
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        side: BorderSide(
+                                          color: Colors.grey[300] ?? Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      "Cancelar",
+                                      style: TextStyle(fontSize: 16),
+                                    ),
                                   ),
-                              child: const Text(
-                                "Crear Tarea",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
                                 ),
-                              ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        side: BorderSide(
+                                          color: Colors.grey[300] ?? Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      "Cancelar",
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.blue[600] ?? Colors.blue,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    onPressed:
+                                        () => _procesarFormularioTarea(
+                                          formKey: formKey,
+                                          esEdicion: false,
+                                          titulo: titulo,
+                                          descripcion: descripcion,
+                                          fecha: fecha,
+                                          prioridad: prioridad,
+                                          categoria: categoria,
+                                          recordatorioActivo: recordatorioActivo,
+                                          emailRecordatorio: emailRecordatorio,
+                                          fechaRecordatorio: fechaRecordatorio,
+                                          horaRecordatorio: horaRecordatorio,
+                                        ),
+                                    child: const Text(
+                                      "Crear Tarea",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -1495,8 +1731,12 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final screenHeight = MediaQuery.of(context).size.height;
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isMobile = screenWidth <= 600;
+            
             return Container(
-              height: MediaQuery.of(context).size.height * 0.9,
+              height: screenHeight * (isMobile ? 0.95 : 0.9),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
@@ -1504,8 +1744,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
               child: Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
-                  left: 24,
-                  right: 24,
+                  left: isMobile ? 16 : 24,
+                  right: isMobile ? 16 : 24,
                   top: 20,
                 ),
                 child: Form(
@@ -1530,7 +1770,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(isMobile ? 10 : 12),
                             decoration: BoxDecoration(
                               color: Colors.orange[50],
                               borderRadius: BorderRadius.circular(15),
@@ -1538,36 +1778,38 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                             child: Icon(
                               Icons.edit,
                               color: Colors.orange[600],
-                              size: 24,
+                              size: isMobile ? 20 : 24,
                             ),
                           ),
-                          const SizedBox(width: 15),
-                          const Text(
+                          SizedBox(width: isMobile ? 12 : 15),
+                          Text(
                             "Editar Tarea",
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: isMobile ? 20 : 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
+                      SizedBox(height: isMobile ? 20 : 30),
 
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // TÃ­tulo
+                              // Título
                               _buildFormField(
-                                label: "Titulo",
+                                label: "Título",
                                 icon: Icons.title,
+                                isMobile: isMobile,
                                 child: TextFormField(
                                   initialValue: titulo,
-                                  style: const TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: isMobile ? 14 : 16),
                                   decoration: _inputDecoration(
-                                    "Ingresa el titulo de la tarea",
+                                    "Ingresa el título de la tarea",
+                                    isMobile,
                                   ),
                                   validator:
                                       (v) =>
@@ -1577,28 +1819,31 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                   onChanged: (v) => titulo = v,
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: isMobile ? 16 : 20),
 
-                              // DescripciÃ³n
+                              // Descripción
                               _buildFormField(
-                                label: "Descripcion",
+                                label: "Descripción",
                                 icon: Icons.description,
+                                isMobile: isMobile,
                                 child: TextFormField(
                                   initialValue: descripcion,
-                                  style: const TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: isMobile ? 14 : 16),
                                   maxLines: 3,
                                   decoration: _inputDecoration(
                                     "Describe los detalles (opcional)",
+                                    isMobile,
                                   ),
                                   onChanged: (v) => descripcion = v ?? "",
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: isMobile ? 16 : 20),
 
                               // Fecha
                               _buildFormField(
                                 label: "Fecha",
                                 icon: Icons.calendar_today,
+                                isMobile: isMobile,
                                 child: InkWell(
                                   onTap: () async {
                                     final pickedDate = await showDatePicker(
@@ -1616,8 +1861,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     }
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isMobile ? 14 : 16,
                                       horizontal: 12,
                                     ),
                                     decoration: BoxDecoration(
@@ -1639,7 +1884,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                             "d 'de' MMMM, yyyy",
                                             "es_ES",
                                           ).format(fecha),
-                                          style: const TextStyle(fontSize: 16),
+                                          style: TextStyle(fontSize: isMobile ? 14 : 16),
                                         ),
                                         const Spacer(),
                                         Icon(
@@ -1651,87 +1896,161 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              SizedBox(height: isMobile ? 16 : 20),
 
-                              // Prioridad y CategorÃ­a
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildFormField(
-                                      label: "Prioridad",
-                                      icon: Icons.priority_high,
-                                      child: DropdownButtonFormField<String>(
-                                        value: prioridad,
-                                        decoration: _inputDecoration(""),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: "baja",
-                                            child: Text("Baja"),
+                              // Prioridad y Categoría
+                              isMobile
+                                  ? Column(
+                                      children: [
+                                        _buildFormField(
+                                          label: "Prioridad",
+                                          icon: Icons.priority_high,
+                                          isMobile: isMobile,
+                                          child: DropdownButtonFormField<String>(
+                                            value: prioridad,
+                                            decoration: _inputDecoration("", isMobile),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: "baja",
+                                                child: Text("Baja"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "media",
+                                                child: Text("Media"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "alta",
+                                                child: Text("Alta"),
+                                              ),
+                                            ],
+                                            onChanged:
+                                                (v) => setModalState(
+                                                  () => prioridad = v ?? "media",
+                                                ),
                                           ),
-                                          DropdownMenuItem(
-                                            value: "media",
-                                            child: Text("Media"),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildFormField(
+                                          label: "Categoría",
+                                          icon: Icons.category,
+                                          isMobile: isMobile,
+                                          child: DropdownButtonFormField<String>(
+                                            value: categoria,
+                                            decoration: _inputDecoration("", isMobile),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: "personal",
+                                                child: Text("Personal"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "trabajo",
+                                                child: Text("Trabajo"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "salud",
+                                                child: Text("Salud"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "hogar",
+                                                child: Text("Hogar"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "estudio",
+                                                child: Text("Estudio"),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: "otro",
+                                                child: Text("Otro"),
+                                              ),
+                                            ],
+                                            onChanged:
+                                                (v) => setModalState(
+                                                  () => categoria = v ?? "personal",
+                                                ),
                                           ),
-                                          DropdownMenuItem(
-                                            value: "alta",
-                                            child: Text("Alta"),
-                                          ),
-                                        ],
-                                        onChanged:
-                                            (v) => setModalState(
-                                              () => prioridad = v ?? "media",
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildFormField(
+                                            label: "Prioridad",
+                                            icon: Icons.priority_high,
+                                            isMobile: isMobile,
+                                            child: DropdownButtonFormField<String>(
+                                              value: prioridad,
+                                              decoration: _inputDecoration("", isMobile),
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: "baja",
+                                                  child: Text("Baja"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "media",
+                                                  child: Text("Media"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "alta",
+                                                  child: Text("Alta"),
+                                                ),
+                                              ],
+                                              onChanged:
+                                                  (v) => setModalState(
+                                                    () => prioridad = v ?? "media",
+                                                  ),
                                             ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: _buildFormField(
-                                      label: "Categoria",
-                                      icon: Icons.category,
-                                      child: DropdownButtonFormField<String>(
-                                        value: categoria,
-                                        decoration: _inputDecoration(""),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: "personal",
-                                            child: Text("Personal"),
                                           ),
-                                          DropdownMenuItem(
-                                            value: "trabajo",
-                                            child: Text("Trabajo"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "salud",
-                                            child: Text("Salud"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "hogar",
-                                            child: Text("Hogar"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "estudio",
-                                            child: Text("Estudio"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "otro",
-                                            child: Text("Otro"),
-                                          ),
-                                        ],
-                                        onChanged:
-                                            (v) => setModalState(
-                                              () => categoria = v ?? "personal",
+                                        ),
+                                        const SizedBox(width: 15),
+                                        Expanded(
+                                          child: _buildFormField(
+                                            label: "Categoría",
+                                            icon: Icons.category,
+                                            isMobile: isMobile,
+                                            child: DropdownButtonFormField<String>(
+                                              value: categoria,
+                                              decoration: _inputDecoration("", isMobile),
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: "personal",
+                                                  child: Text("Personal"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "trabajo",
+                                                  child: Text("Trabajo"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "salud",
+                                                  child: Text("Salud"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "hogar",
+                                                  child: Text("Hogar"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "estudio",
+                                                  child: Text("Estudio"),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: "otro",
+                                                  child: Text("Otro"),
+                                                ),
+                                              ],
+                                              onChanged:
+                                                  (v) => setModalState(
+                                                    () => categoria = v ?? "personal",
+                                                  ),
                                             ),
-                                      ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 30),
+                              SizedBox(height: isMobile ? 20 : 30),
 
-                              // SecciÃ³n de recordatorio
+                              // Sección de recordatorio
                               Container(
-                                padding: const EdgeInsets.all(20),
+                                padding: EdgeInsets.all(isMobile ? 16 : 20),
                                 decoration: BoxDecoration(
                                   color: Colors.blue[50],
                                   borderRadius: BorderRadius.circular(16),
@@ -1745,17 +2064,18 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                         Icon(
                                           Icons.email,
                                           color: Colors.blue[600],
-                                          size: 20,
+                                          size: isMobile ? 18 : 20,
                                         ),
-                                        const SizedBox(width: 8),
-                                        const Text(
-                                          "Recordatorio por Email",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
+                                        SizedBox(width: isMobile ? 6 : 8),
+                                        Expanded(
+                                          child: Text(
+                                            "Recordatorio por Email",
+                                            style: TextStyle(
+                                              fontSize: isMobile ? 16 : 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                        const Spacer(),
                                         Switch(
                                           value: recordatorioActivo,
                                           activeColor: Colors.blue[600],
@@ -1769,19 +2089,21 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     ),
 
                                     if (recordatorioActivo) ...[
-                                      const SizedBox(height: 20),
+                                      SizedBox(height: isMobile ? 16 : 20),
 
                                       // Campo de email
                                       _buildFormField(
-                                        label: "Correo electronico",
+                                        label: "Correo electrónico",
                                         icon: Icons.email_outlined,
+                                        isMobile: isMobile,
                                         child: TextFormField(
                                           initialValue: emailRecordatorio,
                                           keyboardType:
                                               TextInputType.emailAddress,
-                                          style: const TextStyle(fontSize: 16),
+                                          style: TextStyle(fontSize: isMobile ? 14 : 16),
                                           decoration: _inputDecoration(
                                             "ejemplo@gmail.com",
+                                            isMobile,
                                           ),
                                           validator:
                                               recordatorioActivo
@@ -1791,7 +2113,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                     if (!RegExp(
                                                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                                                     ).hasMatch(v)) {
-                                                      return "Email invÃ¡lido";
+                                                      return "Email inválido";
                                                     }
                                                     return null;
                                                   }
@@ -1806,6 +2128,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       _buildFormField(
                                         label: "Fecha del recordatorio",
                                         icon: Icons.calendar_today,
+                                        isMobile: isMobile,
                                         child: InkWell(
                                           onTap: () async {
                                             final pickedDate =
@@ -1828,8 +2151,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                             }
                                           },
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: isMobile ? 14 : 16,
                                               horizontal: 12,
                                             ),
                                             decoration: BoxDecoration(
@@ -1856,8 +2179,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                         fechaRecordatorio!,
                                                       )
                                                       : "Seleccionar fecha",
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 14 : 16,
                                                   ),
                                                 ),
                                                 const Spacer(),
@@ -1875,6 +2198,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       _buildFormField(
                                         label: "Hora del recordatorio",
                                         icon: Icons.access_time,
+                                        isMobile: isMobile,
                                         child: InkWell(
                                           onTap: () async {
                                             TimeOfDay? initialTime;
@@ -1901,8 +2225,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                             }
                                           },
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: isMobile ? 14 : 16,
                                               horizontal: 12,
                                             ),
                                             decoration: BoxDecoration(
@@ -1923,8 +2247,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                 Text(
                                                   horaRecordatorio ??
                                                       "Seleccionar hora",
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 14 : 16,
                                                   ),
                                                 ),
                                                 const Spacer(),
@@ -1941,63 +2265,116 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 30),
+                              SizedBox(height: isMobile ? 20 : 30),
                             ],
                           ),
                         ),
                       ),
                       // Botones
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text(
-                                "Cancelar",
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange[600],
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed:
-                                  () => _procesarFormularioTarea(
-                                    formKey: formKey,
-                                    esEdicion: true,
-                                    tareaId: tareaExistente['id'],
-                                    titulo: titulo,
-                                    descripcion: descripcion,
-                                    fecha: fecha,
-                                    prioridad: prioridad,
-                                    categoria: categoria,
-                                    recordatorioActivo: recordatorioActivo,
-                                    emailRecordatorio: emailRecordatorio,
-                                    fechaRecordatorio: fechaRecordatorio,
-                                    horaRecordatorio: horaRecordatorio,
+                      isMobile
+                          ? Column(
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange[600],
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed:
+                                        () => _procesarFormularioTarea(
+                                          formKey: formKey,
+                                          esEdicion: true,
+                                          tareaId: tareaExistente['id'],
+                                          titulo: titulo,
+                                          descripcion: descripcion,
+                                          fecha: fecha,
+                                          prioridad: prioridad,
+                                          categoria: categoria,
+                                          recordatorioActivo: recordatorioActivo,
+                                          emailRecordatorio: emailRecordatorio,
+                                          fechaRecordatorio: fechaRecordatorio,
+                                          horaRecordatorio: horaRecordatorio,
+                                        ),
+                                    child: const Text(
+                                      "Actualizar Tarea",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                              child: const Text(
-                                "Actualizar Tarea",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      "Cancelar",
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      "Cancelar",
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange[600],
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed:
+                                        () => _procesarFormularioTarea(
+                                          formKey: formKey,
+                                          esEdicion: true,
+                                          tareaId: tareaExistente['id'],
+                                          titulo: titulo,
+                                          descripcion: descripcion,
+                                          fecha: fecha,
+                                          prioridad: prioridad,
+                                          categoria: categoria,
+                                          recordatorioActivo: recordatorioActivo,
+                                          emailRecordatorio: emailRecordatorio,
+                                          fechaRecordatorio: fechaRecordatorio,
+                                          horaRecordatorio: horaRecordatorio,
+                                        ),
+                                    child: const Text(
+                                      "Actualizar Tarea",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -2010,187 +2387,192 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     );
   }
 
-  // FUNCIÃ“N UNIFICADA PARA PROCESAR FORMULARIOS (CREAR Y EDITAR)
+  // FUNCIÓN UNIFICADA PARA PROCESAR FORMULARIOS (CREAR Y EDITAR)
   Future<void> _procesarFormularioTarea({
-  required GlobalKey<FormState> formKey,
-  required bool esEdicion,
-  int? tareaId,
-  required String titulo,
-  required String descripcion,
-  required DateTime fecha,
-  required String prioridad,
-  required String categoria,
-  required bool recordatorioActivo,
-  String? emailRecordatorio,
-  DateTime? fechaRecordatorio,
-  String? horaRecordatorio,
-}) async {
-  if (!formKey.currentState!.validate()) return;
+    required GlobalKey<FormState> formKey,
+    required bool esEdicion,
+    int? tareaId,
+    required String titulo,
+    required String descripcion,
+    required DateTime fecha,
+    required String prioridad,
+    required String categoria,
+    required bool recordatorioActivo,
+    String? emailRecordatorio,
+    DateTime? fechaRecordatorio,
+    String? horaRecordatorio,
+  }) async {
+    if (!formKey.currentState!.validate()) return;
 
-  // Validaciones de recordatorio
-  if (recordatorioActivo) {
-    if (fechaRecordatorio == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Selecciona la fecha del recordatorio"),
-          backgroundColor: Colors.orange[400],
-        ),
-      );
-      return;
-    }
-    if (horaRecordatorio == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Selecciona la hora del recordatorio"),
-          backgroundColor: Colors.orange[400],
-        ),
-      );
-      return;
-    }
-
-    // Validar fecha/hora no estÃ© en el pasado
-    final fechaHoraRecordatorio = DateTime(
-      fechaRecordatorio.year,
-      fechaRecordatorio.month,
-      fechaRecordatorio.day,
-      int.parse(horaRecordatorio.split(':')[0]),
-      int.parse(horaRecordatorio.split(':')[1]),
-    );
-
-    if (fechaHoraRecordatorio.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            "La fecha/hora del recordatorio no puede ser en el pasado",
+    // Validaciones de recordatorio
+    if (recordatorioActivo) {
+      if (fechaRecordatorio == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Selecciona la fecha del recordatorio"),
+            backgroundColor: Colors.orange[400],
           ),
-          backgroundColor: Colors.red[400],
-        ),
-      );
-      return;
-    }
-  }
-
-  try {
-    // Preparar datos
-    final tareaData = {
-      "titulo": titulo,
-      "descripcion": descripcion,
-      "fecha": fecha.toIso8601String().split("T")[0],
-      "prioridad": prioridad,
-      "categoria": categoria,
-      "recordatorio_activo": recordatorioActivo,
-      "email_recordatorio": recordatorioActivo ? emailRecordatorio : null,
-      "fecha_recordatorio":
-          recordatorioActivo && fechaRecordatorio != null
-              ? fechaRecordatorio.toIso8601String().split("T")[0]
-              : null,
-      "hora_recordatorio": recordatorioActivo ? horaRecordatorio : null,
-    };
-
-    // Llamar API
-    Map<String, dynamic> respuesta;
-    if (esEdicion && tareaId != null) {
-      RecordatorioScheduler.cancelarRecordatorio(tareaId.toString());
-      respuesta = await ApiService.updateTarea(tareaId, tareaData);
-    } else {
-      respuesta = await ApiService.addTarea(tareaData);
-    }
-
-    if (!mounted) return;
-
-    // ðŸ”¥ PROGRAMAR RECORDATORIO
-    if (recordatorioActivo && respuesta['success'] == true) {
-      try {
-        // Obtener tarea de la respuesta o usar los datos enviados
-        final tareaParaRecordatorio = respuesta['tarea'] ?? {
-          ...tareaData,
-          'id': tareaId ?? 0, // Si es nueva, se asignarÃ¡ despuÃ©s
-        };
-
-        await RecordatorioScheduler.programarRecordatorio(
-          tarea: tareaParaRecordatorio,
-          onEnviado: () {
-            debugPrint('Recordatorio enviado: $titulo');
-          },
-          onError: (error) {
-            debugPrint(' Error en recordatorio: $error');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Recordatorio programado con advertencia'),
-                  backgroundColor: Colors.orange[400],
-                ),
-              );
-            }
-          },
         );
-        
-        debugPrint(' Recordatorio programado exitosamente');
-      } catch (e) {
-        debugPrint('Error programando recordatorio: $e');
-        // No fallar si el recordatorio falla
+        return;
+      }
+      if (horaRecordatorio == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Selecciona la hora del recordatorio"),
+            backgroundColor: Colors.orange[400],
+          ),
+        );
+        return;
+      }
+
+      // Validar fecha/hora no esté en el pasado
+      final fechaHoraRecordatorio = DateTime(
+        fechaRecordatorio.year,
+        fechaRecordatorio.month,
+        fechaRecordatorio.day,
+        int.parse(horaRecordatorio.split(':')[0]),
+        int.parse(horaRecordatorio.split(':')[1]),
+      );
+
+      if (fechaHoraRecordatorio.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "La fecha/hora del recordatorio no puede ser en el pasado",
+            ),
+            backgroundColor: Colors.red[400],
+          ),
+        );
+        return;
       }
     }
 
-    if (mounted) {
-      Navigator.pop(context);
-      _loadData();
-      _loadAllTasks();
+    try {
+      // Preparar datos
+      final tareaData = {
+        "titulo": titulo,
+        "descripcion": descripcion,
+        "fecha": fecha.toIso8601String().split("T")[0],
+        "prioridad": prioridad,
+        "categoria": categoria,
+        "recordatorio_activo": recordatorioActivo,
+        "email_recordatorio": recordatorioActivo ? emailRecordatorio : null,
+        "fecha_recordatorio":
+            recordatorioActivo && fechaRecordatorio != null
+                ? fechaRecordatorio.toIso8601String().split("T")[0]
+                : null,
+        "hora_recordatorio": recordatorioActivo ? horaRecordatorio : null,
+      };
 
-      final accion = esEdicion ? "actualizada" : "creada";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tarea $accion exitosamente'),
-          backgroundColor: Colors.green[400],
-        ),
-      );
-    }
-  } catch (e) {
-    debugPrint(' Error en _procesarFormularioTarea: $e');
-    if (mounted) {
-      final accion = esEdicion ? "actualizar" : "crear";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al $accion tarea: $e'),
-          backgroundColor: Colors.red[400],
-        ),
-      );
+      // Llamar API
+      Map<String, dynamic> respuesta;
+      if (esEdicion && tareaId != null) {
+        RecordatorioScheduler.cancelarRecordatorio(tareaId.toString());
+        respuesta = await ApiService.updateTarea(tareaId, tareaData);
+      } else {
+        respuesta = await ApiService.addTarea(tareaData);
+      }
+
+      if (!mounted) return;
+
+      // 🔥 PROGRAMAR RECORDATORIO
+      if (recordatorioActivo && respuesta['success'] == true) {
+        try {
+          // Obtener tarea de la respuesta o usar los datos enviados
+          final tareaParaRecordatorio = respuesta['tarea'] ?? {
+            ...tareaData,
+            'id': tareaId ?? 0, // Si es nueva, se asignará después
+          };
+
+          await RecordatorioScheduler.programarRecordatorio(
+            tarea: tareaParaRecordatorio,
+            onEnviado: () {
+              debugPrint('✅ Recordatorio enviado: $titulo');
+            },
+            onError: (error) {
+              debugPrint('❌ Error en recordatorio: $error');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Recordatorio programado con advertencia'),
+                    backgroundColor: Colors.orange[400],
+                  ),
+                );
+              }
+            },
+          );
+          
+          debugPrint('✅ Recordatorio programado exitosamente');
+        } catch (e) {
+          debugPrint('❌ Error programando recordatorio: $e');
+          // No fallar si el recordatorio falla
+        }
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+        _loadData();
+        _loadAllTasks();
+
+        final accion = esEdicion ? "actualizada" : "creada";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tarea $accion exitosamente'),
+            backgroundColor: Colors.green[400],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error en _procesarFormularioTarea: $e');
+      if (mounted) {
+        final accion = esEdicion ? "actualizar" : "crear";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al $accion tarea: $e'),
+            backgroundColor: Colors.red[400],
+          ),
+        );
+      }
     }
   }
-}
+
   // Helper methods para el formulario
   Widget _buildFormField({
     required String label,
     required IconData icon,
     required Widget child,
+    required bool isMobile,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 16, color: Colors.grey[600]),
-            const SizedBox(width: 6),
+            Icon(icon, size: isMobile ? 14 : 16, color: Colors.grey[600]),
+            SizedBox(width: isMobile ? 4 : 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[700],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: isMobile ? 6 : 8),
         child,
       ],
     );
   }
 
-  InputDecoration _inputDecoration(String hint) {
+  InputDecoration _inputDecoration(String hint, bool isMobile) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+      hintStyle: TextStyle(
+        color: Colors.grey[400],
+        fontSize: isMobile ? 12 : 14,
+      ),
       filled: true,
       fillColor: Colors.grey[50],
       border: OutlineInputBorder(
@@ -2213,7 +2595,10 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.red[400]!, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 10 : 12,
+      ),
     );
   }
 }
