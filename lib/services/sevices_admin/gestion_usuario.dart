@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 // 🌐 URL base del backend
-const String baseUrl = "https://backendproyecto-produccion-4a8d.up.railway.app/api/usuarios";
+const String baseUrl = "https://backendproyecto-production-4a8d.up.railway.app/api/usuarios";
 
 /// 📌 Obtener todos los usuarios
 Future<List<Usuario>> buscarUsuarios() async {

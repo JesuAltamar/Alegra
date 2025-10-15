@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-const String baseUrlAdmin = "https://backendproyecto-produccion-4a8d.up.railway.app/api/admin";
+const String baseUrlAdmin = "https://backendproyecto-production-4a8d.up.railway.app/api/admin";
 
 /// 🔹 Obtiene actividades recientes (últimos registros, tareas, juegos, chats)
 Future<List<Map<String, dynamic>>> fetchRecentActivities() async {

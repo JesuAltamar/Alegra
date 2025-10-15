@@ -9,7 +9,7 @@ Future<Map<String, dynamic>> registrarDatos({
   required String password,
   String genero = "No especificado", // Campo por defecto
 }) async {
-  final url = Uri.parse("https://backendproyecto-produccion-4a8d.up.railway.app/api/usuariosip");
+  final url = Uri.parse("https://backendproyecto-production-4a8d.up.railway.app/api/usuariosip");
 
   final response = await http.post(
     url,
