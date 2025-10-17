@@ -552,9 +552,10 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         Flexible(
           child: Container(
             margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
-            padding: EdgeInsets.all(isMobile ? 12 : 16),
+            padding: EdgeInsets.all(isMobile ? 8 : 16),
             constraints: BoxConstraints(
-              maxHeight: isMobile ? 400 : double.infinity,
+              minHeight: isMobile ? 350 : 400,
+              maxHeight: isMobile ? 450 : double.infinity,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -592,11 +593,11 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                 markerBuilder: (context, day, events) {
                   if (events.isNotEmpty) {
                     return Positioned(
-                      right: 1,
-                      bottom: 1,
+                      right: 4,
+                      top: 4,
                       child: Container(
-                        width: 8,
-                        height: 8,
+                        width: isMobile ? 6 : 8,
+                        height: isMobile ? 6 : 8,
                         decoration: BoxDecoration(
                           color: _getEventColor(events),
                           shape: BoxShape.circle,
@@ -618,31 +619,41 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                 ),
                 weekendTextStyle: TextStyle(
                   color: Colors.red[400] ?? Colors.red,
+                  fontSize: isMobile ? 13 : 14,
+                ),
+                defaultTextStyle: TextStyle(
+                  fontSize: isMobile ? 13 : 14,
                 ),
                 outsideDaysVisible: false,
                 markersMaxCount: 1,
-                cellMargin: EdgeInsets.all(isMobile ? 2 : 4),
+                cellMargin: EdgeInsets.all(isMobile ? 3 : 4),
+                cellPadding: EdgeInsets.all(isMobile ? 0 : 2),
               ),
               headerStyle: HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
                 titleTextStyle: TextStyle(
-                  fontSize: isMobile ? 16 : 18,
+                  fontSize: isMobile ? 15 : 18,
                   fontWeight: FontWeight.bold,
                 ),
                 leftChevronIcon: Icon(
                   Icons.chevron_left,
                   color: Colors.blue[400] ?? Colors.blue,
+                  size: isMobile ? 24 : 28,
                 ),
                 rightChevronIcon: Icon(
                   Icons.chevron_right,
                   color: Colors.blue[400] ?? Colors.blue,
+                  size: isMobile ? 24 : 28,
                 ),
+                headerPadding: EdgeInsets.symmetric(vertical: isMobile ? 8 : 16),
               ),
               daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: TextStyle(fontSize: isMobile ? 12 : 14),
-                weekendStyle: TextStyle(fontSize: isMobile ? 12 : 14),
+                weekdayStyle: TextStyle(fontSize: isMobile ? 11 : 14),
+                weekendStyle: TextStyle(fontSize: isMobile ? 11 : 14, color: Colors.red[400]),
               ),
+              daysOfWeekHeight: isMobile ? 30 : 40,
+              rowHeight: isMobile ? 42 : 52,
             ),
           ),
         ),
@@ -1811,8 +1822,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     "Ingresa el título de la tarea",
                                     isMobile,
                                   ),
-                                  validator:
-                                      (v) =>
+                                  validator:(v) =>
                                           v == null || v.isEmpty
                                               ? "Campo requerido"
                                               : null,
@@ -2481,7 +2491,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           // Obtener tarea de la respuesta o usar los datos enviados
           final tareaParaRecordatorio = respuesta['tarea'] ?? {
             ...tareaData,
-            'id': tareaId ?? 0, // Si es nueva, se asignará después
+            'id': tareaId ?? 0,
           };
 
           await RecordatorioScheduler.programarRecordatorio(
@@ -2505,7 +2515,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           debugPrint('✅ Recordatorio programado exitosamente');
         } catch (e) {
           debugPrint('❌ Error programando recordatorio: $e');
-          // No fallar si el recordatorio falla
         }
       }
 
