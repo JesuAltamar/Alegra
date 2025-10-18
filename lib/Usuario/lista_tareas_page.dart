@@ -210,6 +210,243 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
+  // 🆕 MOSTRAR MODAL CON TAREAS DE UNA FECHA ESPECÍFICA
+  void _mostrarTareasDelDia(DateTime fecha) async {
+    final fechaStr = DateFormat("yyyy-MM-dd").format(fecha);
+    
+    try {
+      final tareasDia = await ApiService.getTareas(fecha: fechaStr);
+      
+      if (!mounted) return;
+      
+      if (tareasDia.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("No hay tareas para ${DateFormat("d 'de' MMMM", "es_ES").format(fecha)}"),
+            backgroundColor: const Color(0xFFFFA000),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth <= 600;
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A73E8).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.event_note,
+                        color: Color(0xFF1A73E8),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            DateFormat("d 'de' MMMM", "es_ES").format(fecha),
+                            style: TextStyle(
+                              fontSize: isMobile ? 18 : 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            "${tareasDia.length} tarea${tareasDia.length != 1 ? 's' : ''}",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const Divider(height: 1),
+              
+              // Lista de tareas
+              Expanded(
+                child: ListView.builder(
+                  padding: EdgeInsets.all(isMobile ? 12 : 16),
+                  itemCount: tareasDia.length,
+                  itemBuilder: (context, index) {
+                    final tarea = tareasDia[index];
+                    return _buildTaskItemCompact(tarea, isMobile);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error cargando tareas: $e"),
+          backgroundColor: Colors.red[400],
+        ),
+      );
+    }
+  }
+
+  Widget _buildTaskItemCompact(dynamic t, bool isMobile) {
+    if (t == null) return const SizedBox.shrink();
+
+    final completada = (t["estado"]?.toString() ?? "").toLowerCase() == "completada";
+    final titulo = t["titulo"]?.toString() ?? "(Sin título)";
+    final descripcion = t["descripcion"]?.toString() ?? "";
+    final categoria = t["categoria"]?.toString() ?? "personal";
+    final prioridad = t["prioridad"]?.toString() ?? "media";
+    final id = t["id"];
+    final recordatorioActivo = t["recordatorio_activo"] == true;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
+      padding: EdgeInsets.all(isMobile ? 10 : 12),
+      decoration: BoxDecoration(
+        color: completada ? const Color(0xFFE8F5E9) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8)).withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: completada,
+            activeColor: const Color(0xFF4CAF50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
+            onChanged: (val) => _toggleCompletar(id, val ?? false),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: completada ? Colors.grey[600] : Colors.black87,
+                          decoration: completada ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (recordatorioActivo)
+                      Icon(
+                        Icons.notifications_active,
+                        size: 16,
+                        color: const Color(0xFFFFA000),
+                      ),
+                  ],
+                ),
+                if (descripcion.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    descripcion,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _chip(
+                      categoria,
+                      _getCategoryColor(categoria),
+                      _getCategoryIcon(categoria),
+                    ),
+                    _chip(
+                      prioridad,
+                      _getPriorityColor(prioridad),
+                      _getPriorityIcon(prioridad),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.edit_outlined,
+              color: const Color(0xFF1A73E8),
+              size: 20,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              if (id != null) {
+                _mostrarFormularioEditarTarea(t);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   // Métodos auxiliares para UI
   Color _getEventColor(List events) {
     if (events.isEmpty) return Colors.grey;
@@ -219,23 +456,23 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     bool hasPending = events.any(
       (e) => e != null && (e["estado"]?.toString() ?? "") != "completada",
     );
-    if (hasCompleted && hasPending) return Colors.orange;
-    if (hasCompleted) return Colors.green;
-    return Colors.red;
+    if (hasCompleted && hasPending) return const Color(0xFFFFA000);
+    if (hasCompleted) return const Color(0xFF4CAF50);
+    return const Color(0xFFE53935);
   }
 
   Color _getCategoryColor(String? categoria) {
     switch (categoria?.toLowerCase() ?? "") {
       case "trabajo":
-        return Colors.blue;
+        return const Color(0xFF1A73E8);
       case "personal":
-        return Colors.purple;
+        return const Color(0xFF9C27B0);
       case "salud":
-        return Colors.red;
+        return const Color(0xFFE53935);
       case "hogar":
-        return Colors.green;
+        return const Color(0xFF4CAF50);
       case "estudio":
-        return Colors.orange;
+        return const Color(0xFFFFA000);
       default:
         return Colors.grey;
     }
@@ -261,11 +498,11 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   Color _getPriorityColor(String? prioridad) {
     switch (prioridad?.toLowerCase() ?? "") {
       case "alta":
-        return Colors.red;
+        return const Color(0xFFE53935);
       case "media":
-        return Colors.orange;
+        return const Color(0xFFFFA000);
       case "baja":
-        return Colors.green;
+        return const Color(0xFF4CAF50);
       default:
         return Colors.grey;
     }
@@ -284,47 +521,54 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  Widget _statBox(String label, int value, Color color, IconData icon) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmall = constraints.maxWidth < 100;
-        return Column(
-          children: [
-            Container(
-              padding: EdgeInsets.all(isSmall ? 8 : 12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+  // 🆕 NUEVO: Estadísticas compactas en línea
+  Widget _statBox(String label, int value, Color color, IconData icon, bool isMobile) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 10 : 12,
+        vertical: isMobile ? 8 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: isMobile ? 18 : 20),
+          SizedBox(width: isMobile ? 6 : 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "$value",
+                style: TextStyle(
+                  fontSize: isMobile ? 18 : 20,
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  height: 1,
+                ),
               ),
-              child: Icon(icon, color: color, size: isSmall ? 20 : 24),
-            ),
-            SizedBox(height: isSmall ? 4 : 8),
-            Text(
-              "$value",
-              style: TextStyle(
-                fontSize: isSmall ? 20 : 24,
-                color: color,
-                fontWeight: FontWeight.bold,
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isMobile ? 9 : 10,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: isSmall ? 10 : 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _chip(String text, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
@@ -333,13 +577,13 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             text.isEmpty ? "Sin definir" : text,
             style: TextStyle(
               color: color,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -380,10 +624,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
   @override
   Widget build(BuildContext context) {
-    final fechaTexto = DateFormat("d 'de' MMMM", "es_ES").format(_selectedDate);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth > 1024;
-    final isTablet = screenWidth > 600 && screenWidth <= 1024;
     final isMobile = screenWidth <= 600;
 
     return Scaffold(
@@ -405,25 +646,25 @@ class _ListaTareasPageState extends State<ListaTareasPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.amber[100],
+                color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber[300]!),
+                border: Border.all(color: const Color(0xFFFFA000)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.notifications_active,
                     size: 16,
-                    color: Colors.amber[700],
+                    color: Color(0xFFFFA000),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${RecordatorioScheduler.recordatoriosActivos}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.amber[700],
+                      color: Color(0xFFFFA000),
                     ),
                   ),
                 ],
@@ -439,535 +680,192 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
-      body: isDesktop || isTablet
-          ? Row(
-              children: [
-                // Calendario + estadísticas
-                Expanded(
-                  flex: isDesktop ? 1 : 2,
-                  child: _buildCalendarSection(isDesktop, isTablet, isMobile),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 🆕 Estadísticas en UNA línea horizontal
+            Container(
+              margin: EdgeInsets.all(isMobile ? 12 : 20),
+              padding: EdgeInsets.all(isMobile ? 12 : 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE3F2FD),
+                    Colors.white,
+                  ],
                 ),
-                // Lista de tareas
-                Expanded(
-                  flex: isDesktop ? 1 : 3,
-                  child: _buildTasksSection(fechaTexto, isDesktop, isTablet, isMobile),
-                ),
-              ],
-            )
-          : SingleChildScrollView(
-              child: Column(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF1A73E8).withOpacity(0.1),
+                    blurRadius: 15,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildCalendarSection(isDesktop, isTablet, isMobile),
-                  _buildTasksSection(fechaTexto, isDesktop, isTablet, isMobile),
+                  Flexible(
+                    child: _statBox(
+                      "Completadas",
+                      _getStatValue("completadas"),
+                      const Color(0xFF4CAF50),
+                      Icons.check_circle,
+                      isMobile,
+                    ),
+                  ),
+                  SizedBox(width: isMobile ? 8 : 12),
+                  Flexible(
+                    child: _statBox(
+                      "Total",
+                      _getStatValue("total"),
+                      const Color(0xFF1A73E8),
+                      Icons.list_alt,
+                      isMobile,
+                    ),
+                  ),
+                  SizedBox(width: isMobile ? 8 : 12),
+                  Flexible(
+                    child: _statBox(
+                      "Recordatorios",
+                      _getStatValue("recordatorios"),
+                      const Color(0xFFFFA000),
+                      Icons.notifications,
+                      isMobile,
+                    ),
+                  ),
                 ],
               ),
             ),
+            
+            // Calendario
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
+              padding: EdgeInsets.all(isMobile ? 8 : 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: TableCalendar(
+                locale: 'es_ES',
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDate = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                  
+                  // 🆕 Mostrar modal con tareas si hay tareas en esa fecha
+                  final tareasDelDia = _getEventsForDay(selectedDay);
+                  if (tareasDelDia.isNotEmpty) {
+                    _mostrarTareasDelDia(selectedDay);
+                  } else {
+                    _loadData();
+                  }
+                },
+                onPageChanged: (focusedDay) {
+                  setState(() {
+                    _focusedDay = focusedDay;
+                  });
+                  _loadAllTasks();
+                },
+                eventLoader: (day) => _getEventsForDay(day),
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, day, events) {
+                    if (events.isNotEmpty) {
+                      return Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Container(
+                          width: isMobile ? 6 : 8,
+                          height: isMobile ? 6 : 8,
+                          decoration: BoxDecoration(
+                            color: _getEventColor(events),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _getEventColor(events).withOpacity(0.5),
+                                blurRadius: 3,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
+                  },
+                ),
+                calendarStyle: CalendarStyle(
+                  selectedDecoration: const BoxDecoration(
+                    color: Color(0xFF1A73E8),
+                    shape: BoxShape.circle,
+                  ),
+                  todayDecoration: const BoxDecoration(
+                    color: Color(0xFFFFA000),
+                    shape: BoxShape.circle,
+                  ),
+                  weekendTextStyle: const TextStyle(
+                    color: Color(0xFFE53935),
+                    fontSize: 14,
+                  ),
+                  defaultTextStyle: const TextStyle(
+                    fontSize: 14,
+                  ),
+                  outsideDaysVisible: false,
+                  markersMaxCount: 1,
+                  cellMargin: EdgeInsets.all(isMobile ? 3 : 4),
+                  cellPadding: EdgeInsets.all(isMobile ? 0 : 2),
+                ),
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextStyle: TextStyle(
+                    fontSize: isMobile ? 16 : 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  leftChevronIcon: const Icon(
+                    Icons.chevron_left,
+                    color: Color(0xFF1A73E8),
+                  ),
+                  rightChevronIcon: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF1A73E8),
+                  ),
+                  headerPadding: EdgeInsets.symmetric(vertical: isMobile ? 8 : 16),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(fontSize: isMobile ? 11 : 14),
+                  weekendStyle: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFFE53935),
+                  ),
+                ),
+                daysOfWeekHeight: isMobile ? 30 : 40,
+                rowHeight: isMobile ? 48 : 52,
+              ),
+            ),
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
       floatingActionButton: _buildFloatingActionButton(isMobile),
     );
-  }
-
-  Widget _buildCalendarSection(bool isDesktop, bool isTablet, bool isMobile) {
-    return Column(
-      children: [
-        Container(
-          margin: EdgeInsets.all(isMobile ? 12 : 20),
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.blue[50] ?? Colors.blue.shade50,
-                Colors.white,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.withOpacity(0.1),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: isMobile
-              ? Column(
-                  children: [
-                    _statBox(
-                      "Completadas",
-                      _getStatValue("completadas"),
-                      Colors.green,
-                      Icons.check_circle,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          child: _statBox(
-                            "Total",
-                            _getStatValue("total"),
-                            Colors.blue,
-                            Icons.list_alt,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _statBox(
-                            "Recordatorios",
-                            _getStatValue("recordatorios"),
-                            Colors.amber,
-                            Icons.notifications,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _statBox(
-                      "Completadas",
-                      _getStatValue("completadas"),
-                      Colors.green,
-                      Icons.check_circle,
-                    ),
-                    _statBox(
-                      "Total",
-                      _getStatValue("total"),
-                      Colors.blue,
-                      Icons.list_alt,
-                    ),
-                    _statBox(
-                      "Recordatorios",
-                      _getStatValue("recordatorios"),
-                      Colors.amber,
-                      Icons.notifications,
-                    ),
-                  ],
-                ),
-        ),
-        Flexible(
-          child: Container(
-            margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
-            padding: EdgeInsets.all(isMobile ? 8 : 16),
-            constraints: BoxConstraints(
-              minHeight: isMobile ? 350 : 400,
-              maxHeight: isMobile ? 450 : double.infinity,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: TableCalendar(
-              locale: 'es_ES',
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDate = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-                _loadData();
-              },
-              onPageChanged: (focusedDay) {
-                setState(() {
-                  _focusedDay = focusedDay;
-                });
-                _loadAllTasks();
-              },
-              eventLoader: (day) => _getEventsForDay(day),
-              calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, day, events) {
-                  if (events.isNotEmpty) {
-                    return Positioned(
-                      right: 4,
-                      top: 4,
-                      child: Container(
-                        width: isMobile ? 6 : 8,
-                        height: isMobile ? 6 : 8,
-                        decoration: BoxDecoration(
-                          color: _getEventColor(events),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    );
-                  }
-                  return null;
-                },
-              ),
-              calendarStyle: CalendarStyle(
-                selectedDecoration: BoxDecoration(
-                  color: Colors.blue[400] ?? Colors.blue,
-                  shape: BoxShape.circle,
-                ),
-                todayDecoration: BoxDecoration(
-                  color: Colors.orange[400] ?? Colors.orange,
-                  shape: BoxShape.circle,
-                ),
-                weekendTextStyle: TextStyle(
-                  color: Colors.red[400] ?? Colors.red,
-                  fontSize: isMobile ? 13 : 14,
-                ),
-                defaultTextStyle: TextStyle(
-                  fontSize: isMobile ? 13 : 14,
-                ),
-                outsideDaysVisible: false,
-                markersMaxCount: 1,
-                cellMargin: EdgeInsets.all(isMobile ? 3 : 4),
-                cellPadding: EdgeInsets.all(isMobile ? 0 : 2),
-              ),
-              headerStyle: HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
-                titleTextStyle: TextStyle(
-                  fontSize: isMobile ? 15 : 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                leftChevronIcon: Icon(
-                  Icons.chevron_left,
-                  color: Colors.blue[400] ?? Colors.blue,
-                  size: isMobile ? 24 : 28,
-                ),
-                rightChevronIcon: Icon(
-                  Icons.chevron_right,
-                  color: Colors.blue[400] ?? Colors.blue,
-                  size: isMobile ? 24 : 28,
-                ),
-                headerPadding: EdgeInsets.symmetric(vertical: isMobile ? 8 : 16),
-              ),
-              daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: TextStyle(fontSize: isMobile ? 11 : 14),
-                weekendStyle: TextStyle(fontSize: isMobile ? 11 : 14, color: Colors.red[400]),
-              ),
-              daysOfWeekHeight: isMobile ? 30 : 40,
-              rowHeight: isMobile ? 42 : 52,
-            ),
-          ),
-        ),
-        SizedBox(height: isMobile ? 12 : 20),
-      ],
-    );
-  }
-
-  Widget _buildTasksSection(String fechaTexto, bool isDesktop, bool isTablet, bool isMobile) {
-    return Container(
-      margin: EdgeInsets.all(isMobile ? 12 : 20),
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
-      constraints: BoxConstraints(
-        minHeight: isMobile ? 300 : 400,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.event_note,
-                color: Colors.blue[600] ?? Colors.blue,
-                size: isMobile ? 20 : 24,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Tareas para $fechaTexto",
-                  style: TextStyle(
-                    fontSize: isMobile ? 18 : 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(child: _buildTasksList(isMobile)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTasksList(bool isMobile) {
-    if (tareas.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.task_alt,
-              size: isMobile ? 48 : 64,
-              color: Colors.grey[300] ?? Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "No hay tareas para esta fecha",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: isMobile ? 14 : 16,
-                color: Colors.grey[500] ?? Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "¡Agrega una nueva tarea!",
-              style: TextStyle(
-                fontSize: isMobile ? 12 : 14,
-                color: Colors.grey[400] ?? Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: tareas.length,
-      itemBuilder: (context, i) => _buildTaskItem(i, isMobile),
-    );
-  }
-
-  Widget _buildTaskItem(int index, bool isMobile) {
-    try {
-      if (index >= tareas.length) return const SizedBox.shrink();
-
-      final t = tareas[index];
-      if (t == null) return const SizedBox.shrink();
-
-      final completada =
-          (t["estado"]?.toString() ?? "").toLowerCase() == "completada";
-      final titulo = t["titulo"]?.toString() ?? "(Sin título)";
-      final descripcion = t["descripcion"]?.toString() ?? "";
-      final categoria = t["categoria"]?.toString() ?? "personal";
-      final prioridad = t["prioridad"]?.toString() ?? "media";
-      final id = t["id"];
-      final recordatorioActivo = t["recordatorio_activo"] == true;
-      final emailRecordatorio = t["email_recordatorio"]?.toString();
-
-      return Container(
-        margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors:
-                completada
-                    ? [
-                      Colors.green[50] ?? Colors.green.shade50,
-                      Colors.green[25] ?? Colors.green.shade100,
-                    ]
-                    : [
-                      Colors.red[50] ?? Colors.red.shade50,
-                      Colors.red[25] ?? Colors.red.shade100,
-                    ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color:
-                completada
-                    ? Colors.green[200] ?? Colors.green.shade200
-                    : Colors.red[200] ?? Colors.red.shade200,
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (completada ? Colors.green : Colors.red).withOpacity(0.1),
-              blurRadius: 8,
-              spreadRadius: 0,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 12 : 16),
-          child: Row(
-            children: [
-              Transform.scale(
-                scale: isMobile ? 1.0 : 1.2,
-                child: Checkbox(
-                  value: completada,
-                  activeColor: Colors.green[400] ?? Colors.green,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  onChanged: (val) => _toggleCompletar(id, val ?? false),
-                ),
-              ),
-              SizedBox(width: isMobile ? 8 : 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            titulo,
-                            style: TextStyle(
-                              fontSize: isMobile ? 16 : 18,
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  completada
-                                      ? Colors.grey[600] ?? Colors.grey
-                                      : Colors.black87,
-                              decoration:
-                                  completada
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                            ),
-                          ),
-                        ),
-                        if (recordatorioActivo) ...[
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.amber[100],
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Icon(
-                              Icons.notifications_active,
-                              size: isMobile ? 14 : 16,
-                              color: Colors.amber[700],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (descripcion.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        descripcion,
-                        style: TextStyle(
-                          fontSize: isMobile ? 12 : 14,
-                          color:
-                              completada
-                                  ? Colors.grey[500] ?? Colors.grey
-                                  : Colors.grey[700] ?? Colors.grey,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    SizedBox(height: isMobile ? 8 : 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _chip(
-                          categoria,
-                          _getCategoryColor(categoria),
-                          _getCategoryIcon(categoria),
-                        ),
-                        _chip(
-                          prioridad,
-                          _getPriorityColor(prioridad),
-                          _getPriorityIcon(prioridad),
-                        ),
-                        if (recordatorioActivo &&
-                            emailRecordatorio != null) ...[
-                          _chip(
-                            emailRecordatorio.contains('@')
-                                ? emailRecordatorio
-                                        .split('@')[0]
-                                        .substring(
-                                          0,
-                                          emailRecordatorio
-                                                      .split('@')[0]
-                                                      .length >
-                                                  4
-                                              ? 4
-                                              : emailRecordatorio
-                                                  .split('@')[0]
-                                                  .length,
-                                        ) +
-                                    '...'
-                                : emailRecordatorio.substring(
-                                  0,
-                                  emailRecordatorio.length > 4
-                                      ? 4
-                                      : emailRecordatorio.length,
-                                ),
-                            Colors.amber,
-                            Icons.email,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Botón de editar
-              IconButton(
-                icon: Container(
-                  padding: EdgeInsets.all(isMobile ? 6 : 8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50] ?? Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.edit_outlined,
-                    color: Colors.blue[400] ?? Colors.blue,
-                    size: isMobile ? 18 : 20,
-                  ),
-                ),
-                onPressed: () {
-                  if (id != null) {
-                    _mostrarFormularioEditarTarea(t);
-                  }
-                },
-              ),
-              // Botón de eliminar
-              IconButton(
-                icon: Container(
-                  padding: EdgeInsets.all(isMobile ? 6 : 8),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50] ?? Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.delete_outline,
-                    color: Colors.red[400] ?? Colors.red,
-                    size: isMobile ? 18 : 20,
-                  ),
-                ),
-                onPressed: () {
-                  if (id != null) {
-                    _deleteTarea(id);
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-    } catch (e) {
-      debugPrint("Error construyendo item de tarea: $e");
-      return const SizedBox.shrink();
-    }
   }
 
   Widget _buildFloatingActionButton(bool isMobile) {
@@ -979,7 +877,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         ),
       ),
       child: FloatingActionButton.extended(
-        backgroundColor: Colors.blue[600] ?? Colors.blue,
+        backgroundColor: const Color(0xFF1A73E8),
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: _mostrarFormularioNuevaTarea,
@@ -995,6 +893,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       ),
     );
   }
+
+ 
 
   // FORMULARIO PARA CREAR NUEVA TAREA
   Future<void> _mostrarFormularioNuevaTarea() async {
