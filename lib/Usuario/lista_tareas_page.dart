@@ -299,52 +299,52 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  void _mostrarTareasDelDia(DateTime fecha) async {
-    final fechaStr = DateFormat("yyyy-MM-dd").format(fecha);
+void _mostrarTareasDelDia(DateTime fecha) async {
+  final fechaStr = DateFormat("yyyy-MM-dd").format(fecha);
+  
+  try {
+    // Usar cache si existe
+    List<dynamic> tareasDia;
+    if (_tareasCache.containsKey(fechaStr)) {
+      tareasDia = _tareasCache[fechaStr]!;
+    } else {
+      tareasDia = await ApiService.getTareas(fecha: fechaStr);
+      _tareasCache[fechaStr] = tareasDia;
+    }
     
-    try {
-      // Usar cache si existe
-      List<dynamic> tareasDia;
-      if (_tareasCache.containsKey(fechaStr)) {
-        tareasDia = _tareasCache[fechaStr]!;
-      } else {
-        tareasDia = await ApiService.getTareas(fecha: fechaStr);
-        _tareasCache[fechaStr] = tareasDia;
-      }
-      
-      if (!mounted) return;
-      
-      if (tareasDia.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "No hay tareas para ${DateFormat("d 'de' MMMM", "es_ES").format(fecha)}",
-            ),
-            backgroundColor: const Color(0xFFFFA000),
-            duration: const Duration(seconds: 2),
+    if (!mounted) return;
+    
+    if (tareasDia.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "No hay tareas para ${DateFormat("d 'de' MMMM", "es_ES").format(fecha)}",
           ),
-        );
-        return;
-      }
+          backgroundColor: const Color(0xFFFFA000),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
-      final screenWidth = MediaQuery.of(context).size.width;
-      final isMobile = screenWidth <= 600;
-      final isTablet = screenWidth > 600 && screenWidth <= 1024;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+    final isTablet = screenWidth > 600 && screenWidth <= 1024;
 
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => Container(
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Center(  // 🔥 AGREGADO: Centrar el modal
+        child: Container(
           height: MediaQuery.of(context).size.height * (isMobile ? 0.75 : 0.65),
+          width: isMobile ? double.infinity : (isTablet ? 600 : 700),  // 🔥 CAMBIADO: Ancho fijo en desktop
           constraints: BoxConstraints(
-            maxWidth: isTablet ? 600 : 500,
+            maxWidth: 700,  // 🔥 AGREGADO: Ancho máximo
           ),
-          margin: isTablet || !isMobile 
-              ? EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width * 0.2,
-                )
-              : EdgeInsets.zero,
+          margin: isMobile 
+              ? EdgeInsets.zero 
+              : const EdgeInsets.symmetric(horizontal: 20),  // 🔥 SIMPLIFICADO
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
@@ -421,158 +421,167 @@ class _ListaTareasPageState extends State<ListaTareasPage>
             ],
           ),
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error cargando tareas: $e"),
-          backgroundColor: Colors.red[400],
-        ),
-      );
-    }
-  }
-
-  Widget _buildTaskItemCompact(dynamic t, bool isMobile) {
-    if (t == null) return const SizedBox.shrink();
-
-    final completada = (t["estado"]?.toString() ?? "").toLowerCase() == "completada";
-    final titulo = t["titulo"]?.toString() ?? "(Sin título)";
-    final descripcion = t["descripcion"]?.toString() ?? "";
-    final categoria = t["categoria"]?.toString() ?? "personal";
-    final prioridad = t["prioridad"]?.toString() ?? "media";
-    final id = t["id"];
-    final recordatorioActivo = t["recordatorio_activo"] == true;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
-      padding: EdgeInsets.all(isMobile ? 10 : 12),
-      decoration: BoxDecoration(
-        color: completada ? const Color(0xFFE8F5E9) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8))
-                .withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
-        children: [
-          Checkbox(
-            value: completada,
-            activeColor: const Color(0xFF4CAF50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-            ),
-            onChanged: (val) => _toggleCompletar(id, val ?? false),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        titulo,
-                        style: TextStyle(
-                          fontSize: isMobile ? 14 : 16,
-                          fontWeight: FontWeight.w600,
-                          color: completada ? Colors.grey[600] : Colors.black87,
-                          decoration: completada ? TextDecoration.lineThrough : null,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (recordatorioActivo)
-                      const Icon(
-                        Icons.notifications_active,
-                        size: 16,
-                        color: Color(0xFFFFA000),
-                      ),
-                  ],
-                ),
-                if (descripcion.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    descripcion,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _chip(
-                      categoria,
-                      _getCategoryColor(categoria),
-                      _getCategoryIcon(categoria),
-                    ),
-                    _chip(
-                      prioridad,
-                      _getPriorityColor(prioridad),
-                      _getPriorityIcon(prioridad),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // 🆕 BOTONES DE EDITAR Y ELIMINAR
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: Color(0xFF1A73E8),
-                  size: 20,
-                ),
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  Navigator.pop(context);
-                  if (id != null) {
-                    _mostrarFormularioEditarTarea(t);
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.red,
-                  size: 20,
-                ),
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  Navigator.pop(context);
-                  if (id != null) {
-                    _deleteTarea(id);
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
+    );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error cargando tareas: $e"),
+        backgroundColor: Colors.red[400],
       ),
     );
   }
+}
+
+  Widget _buildTaskItemCompact(dynamic t, bool isMobile) {
+  if (t == null) return const SizedBox.shrink();
+
+  final completada = (t["estado"]?.toString() ?? "").toLowerCase() == "completada";
+  final titulo = t["titulo"]?.toString() ?? "(Sin título)";
+  final descripcion = t["descripcion"]?.toString() ?? "";
+  final categoria = t["categoria"]?.toString() ?? "personal";
+  final prioridad = t["prioridad"]?.toString() ?? "media";
+  final id = t["id"];
+  final recordatorioActivo = t["recordatorio_activo"] == true;
+
+  return Container(
+    margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
+    padding: EdgeInsets.all(isMobile ? 10 : 12),
+    decoration: BoxDecoration(
+      color: completada ? const Color(0xFFE8F5E9) : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: (completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8))
+              .withOpacity(0.1),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Checkbox(
+          value: completada,
+          activeColor: const Color(0xFF4CAF50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+          onChanged: (val) => _toggleCompletar(id, val ?? false),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      titulo,
+                      style: TextStyle(
+                        fontSize: isMobile ? 14 : 16,
+                        fontWeight: FontWeight.w600,
+                        color: completada ? Colors.grey[600] : Colors.black87,
+                        decoration: completada ? TextDecoration.lineThrough : null,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (recordatorioActivo)
+                    const Icon(
+                      Icons.notifications_active,
+                      size: 16,
+                      color: Color(0xFFFFA000),
+                    ),
+                ],
+              ),
+              if (descripcion.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  descripcion,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _chip(
+                    categoria,
+                    _getCategoryColor(categoria),
+                    _getCategoryIcon(categoria),
+                  ),
+                  _chip(
+                    prioridad,
+                    _getPriorityColor(prioridad),
+                    _getPriorityIcon(prioridad),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        // 🆕 BOTONES DE EDITAR Y ELIMINAR (SIN CERRAR EL MODAL)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFF1A73E8),
+                size: 20,
+              ),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                // 🔥 PRIMERO cerrar este modal
+                Navigator.pop(context);
+                // 🔥 LUEGO abrir el modal de edición
+                if (id != null) {
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    _mostrarFormularioEditarTarea(t);
+                  });
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 20,
+              ),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                // 🔥 PRIMERO cerrar este modal
+                Navigator.pop(context);
+                // 🔥 LUEGO mostrar confirmación de eliminación
+                if (id != null) {
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    _deleteTarea(id);
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Color _getEventColor(List events) {
     if (events.isEmpty) return Colors.grey;
