@@ -335,92 +335,18 @@ void _mostrarTareasDelDia(DateTime fecha) async {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Center(  // 🔥 AGREGADO: Centrar el modal
-        child: Container(
-          height: MediaQuery.of(context).size.height * (isMobile ? 0.75 : 0.65),
-          width: isMobile ? double.infinity : (isTablet ? 600 : 700),  // 🔥 CAMBIADO: Ancho fijo en desktop
-          constraints: BoxConstraints(
-            maxWidth: 700,  // 🔥 AGREGADO: Ancho máximo
-          ),
-          margin: isMobile 
-              ? EdgeInsets.zero 
-              : const EdgeInsets.symmetric(horizontal: 20),  // 🔥 SIMPLIFICADO
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          child: Column(
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 50,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              
-              Padding(
-                padding: EdgeInsets.all(isMobile ? 16 : 20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A73E8).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.event_note,
-                        color: Color(0xFF1A73E8),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            DateFormat("d 'de' MMMM", "es_ES").format(fecha),
-                            style: TextStyle(
-                              fontSize: isMobile ? 18 : 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            "${tareasDia.length} tarea${tareasDia.length != 1 ? 's' : ''}",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const Divider(height: 1),
-              
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.all(isMobile ? 12 : 16),
-                  itemCount: tareasDia.length,
-                  itemBuilder: (context, index) {
-                    final tarea = tareasDia[index];
-                    return _buildTaskItemCompact(tarea, isMobile);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => _ModalTareasDelDia(
+        fecha: fecha,
+        tareasDia: tareasDia,
+        isMobile: isMobile,
+        isTablet: isTablet,
+        onToggle: _toggleCompletar,
+        onEdit: _mostrarFormularioEditarTarea,
+        onDelete: _deleteTarea,
+        getCategoryColor: _getCategoryColor,
+        getCategoryIcon: _getCategoryIcon,
+        getPriorityColor: _getPriorityColor,
+        getPriorityIcon: _getPriorityIcon,
       ),
     );
   } catch (e) {
@@ -2626,6 +2552,324 @@ void _mostrarTareasDelDia(DateTime fecha) async {
       contentPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 16,
         vertical: isMobile ? 10 : 12),
+    );
+  }
+}
+// 🆕 WIDGET STATEFUL PARA EL MODAL
+class _ModalTareasDelDia extends StatefulWidget {
+  final DateTime fecha;
+  final List<dynamic> tareasDia;
+  final bool isMobile;
+  final bool isTablet;
+  final Function(int?, bool) onToggle;
+  final Function(Map<String, dynamic>) onEdit;
+  final Function(int?) onDelete;
+  final Color Function(String?) getCategoryColor;
+  final IconData Function(String?) getCategoryIcon;
+  final Color Function(String?) getPriorityColor;
+  final IconData Function(String?) getPriorityIcon;
+
+  const _ModalTareasDelDia({
+    required this.fecha,
+    required this.tareasDia,
+    required this.isMobile,
+    required this.isTablet,
+    required this.onToggle,
+    required this.onEdit,
+    required this.onDelete,
+    required this.getCategoryColor,
+    required this.getCategoryIcon,
+    required this.getPriorityColor,
+    required this.getPriorityIcon,
+  });
+
+  @override
+  State<_ModalTareasDelDia> createState() => _ModalTareasDelDiaState();
+}
+
+class _ModalTareasDelDiaState extends State<_ModalTareasDelDia> {
+  late List<dynamic> _tareas;
+
+  @override
+  void initState() {
+    super.initState();
+    _tareas = List.from(widget.tareasDia);
+  }
+
+  void _toggleTareaLocal(int? id, bool completada) {
+    if (id == null) return;
+
+    // 🔥 ACTUALIZACIÓN OPTIMISTA LOCAL
+    setState(() {
+      final index = _tareas.indexWhere((t) => t['id'] == id);
+      if (index != -1) {
+        _tareas[index]['estado'] = completada ? 'completada' : 'pendiente';
+      }
+    });
+
+    // Llamar la función del padre
+    widget.onToggle(id, completada);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        height: MediaQuery.of(context).size.height * (widget.isMobile ? 0.75 : 0.65),
+        width: widget.isMobile ? double.infinity : (widget.isTablet ? 600 : 700),
+        constraints: const BoxConstraints(maxWidth: 700),
+        margin: widget.isMobile 
+            ? EdgeInsets.zero 
+            : const EdgeInsets.symmetric(horizontal: 20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 50,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: EdgeInsets.all(widget.isMobile ? 16 : 20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A73E8).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.event_note,
+                      color: Color(0xFF1A73E8),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat("d 'de' MMMM", "es_ES").format(widget.fecha),
+                          style: TextStyle(
+                            fontSize: widget.isMobile ? 18 : 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          "${_tareas.length} tarea${_tareas.length != 1 ? 's' : ''}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const Divider(height: 1),
+            
+            // Lista de tareas
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.all(widget.isMobile ? 12 : 16),
+                itemCount: _tareas.length,
+                itemBuilder: (context, index) {
+                  final tarea = _tareas[index];
+                  return _buildTaskItem(tarea);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskItem(dynamic t) {
+    if (t == null) return const SizedBox.shrink();
+
+    final completada = (t["estado"]?.toString() ?? "").toLowerCase() == "completada";
+    final titulo = t["titulo"]?.toString() ?? "(Sin título)";
+    final descripcion = t["descripcion"]?.toString() ?? "";
+    final categoria = t["categoria"]?.toString() ?? "personal";
+    final prioridad = t["prioridad"]?.toString() ?? "media";
+    final id = t["id"];
+    final recordatorioActivo = t["recordatorio_activo"] == true;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: widget.isMobile ? 10 : 12),
+      padding: EdgeInsets.all(widget.isMobile ? 10 : 12),
+      decoration: BoxDecoration(
+        color: completada ? const Color(0xFFE8F5E9) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8))
+                .withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: completada,
+            activeColor: const Color(0xFF4CAF50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
+            onChanged: (val) => _toggleTareaLocal(id, val ?? false),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: widget.isMobile ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: completada ? Colors.grey[600] : Colors.black87,
+                          decoration: completada ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (recordatorioActivo)
+                      const Icon(
+                        Icons.notifications_active,
+                        size: 16,
+                        color: Color(0xFFFFA000),
+                      ),
+                  ],
+                ),
+                if (descripcion.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    descripcion,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildChip(
+                      categoria,
+                      widget.getCategoryColor(categoria),
+                      widget.getCategoryIcon(categoria),
+                    ),
+                    _buildChip(
+                      prioridad,
+                      widget.getPriorityColor(prioridad),
+                      widget.getPriorityIcon(prioridad),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: Color(0xFF1A73E8),
+                  size: 20,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (id != null) {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      widget.onEdit(t);
+                    });
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (id != null) {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      widget.onDelete(id);
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(String text, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text.isEmpty ? "Sin definir" : text,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
