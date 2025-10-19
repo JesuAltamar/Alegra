@@ -2510,5 +2510,4 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       ),
     );
   }
-} 
- 
+}
