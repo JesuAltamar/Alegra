@@ -390,10 +390,10 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                       ),
                     ),
                     if (recordatorioActivo)
-                      Icon(
+                      const Icon(
                         Icons.notifications_active,
                         size: 16,
-                        color: const Color(0xFFFFA000),
+                        color: Color(0xFFFFA000),
                       ),
                   ],
                 ),
@@ -430,9 +430,9 @@ class _ListaTareasPageState extends State<ListaTareasPage>
             ),
           ),
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.edit_outlined,
-              color: const Color(0xFF1A73E8),
+              color: Color(0xFF1A73E8),
               size: 20,
             ),
             onPressed: () {
@@ -521,47 +521,40 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  // 🆕 NUEVO: Estadísticas compactas en línea
-  Widget _statBox(String label, int value, Color color, IconData icon, bool isMobile) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 10 : 12,
-        vertical: isMobile ? 8 : 10,
-      ),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: isMobile ? 18 : 20),
-          SizedBox(width: isMobile ? 6 : 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "$value",
-                style: TextStyle(
-                  fontSize: isMobile ? 18 : 20,
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  height: 1,
-                ),
+  // 🆕 ESTADÍSTICAS COMPACTAS EN LÍNEA HORIZONTAL
+  Widget _statBox(String label, int value, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              "$value",
+              style: TextStyle(
+                fontSize: 24,
+                color: color,
+                fontWeight: FontWeight.bold,
               ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: isMobile ? 9 : 10,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-        ],
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -626,50 +619,59 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth <= 600;
+    final recordatoriosActivos = RecordatorioScheduler.recordatoriosActivos;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Row(
           children: [
-            Flexible(
+            const Expanded(
               child: Text(
                 "Lista de Tareas",
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: isMobile ? 18 : 20,
+                  fontSize: 20,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFFA000)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.notifications_active,
-                    size: 16,
-                    color: Color(0xFFFFA000),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${RecordatorioScheduler.recordatoriosActivos}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+            // 🔔 CAMPANITA SIN EL NÚMERO 0
+            if (recordatoriosActivos > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFA000)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.notifications_active,
+                      size: 18,
                       color: Color(0xFFFFA000),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Text(
+                      '$recordatoriosActivos',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFFFA000),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const Icon(
+                Icons.notifications_outlined,
+                size: 24,
+                color: Color(0xFFFFA000),
               ),
-            ),
           ],
         ),
         backgroundColor: Colors.white,
@@ -683,10 +685,10 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🆕 Estadísticas en UNA línea horizontal
+            // 🆕 ESTADÍSTICAS EN UNA LÍNEA HORIZONTAL
             Container(
-              margin: EdgeInsets.all(isMobile ? 12 : 20),
-              padding: EdgeInsets.all(isMobile ? 12 : 16),
+              margin: EdgeInsets.all(isMobile ? 16 : 20),
+              padding: EdgeInsets.all(isMobile ? 16 : 20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -707,36 +709,26 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Flexible(
-                    child: _statBox(
-                      "Completadas",
-                      _getStatValue("completadas"),
-                      const Color(0xFF4CAF50),
-                      Icons.check_circle,
-                      isMobile,
-                    ),
+                  _statBox(
+                    "Completadas",
+                    _getStatValue("completadas"),
+                    const Color(0xFF4CAF50),
+                    Icons.check_circle,
                   ),
-                  SizedBox(width: isMobile ? 8 : 12),
-                  Flexible(
-                    child: _statBox(
-                      "Total",
-                      _getStatValue("total"),
-                      const Color(0xFF1A73E8),
-                      Icons.list_alt,
-                      isMobile,
-                    ),
+                  const SizedBox(width: 12),
+                  _statBox(
+                    "Total",
+                    _getStatValue("total"),
+                    const Color(0xFF1A73E8),
+                    Icons.list_alt,
                   ),
-                  SizedBox(width: isMobile ? 8 : 12),
-                  Flexible(
-                    child: _statBox(
-                      "Recordatorios",
-                      _getStatValue("recordatorios"),
-                      const Color(0xFFFFA000),
-                      Icons.notifications,
-                      isMobile,
-                    ),
+                  const SizedBox(width: 12),
+                  _statBox(
+                    "Recordatorios",
+                    _getStatValue("recordatorios"),
+                    const Color(0xFFFFA000),
+                    Icons.notifications,
                   ),
                 ],
               ),
