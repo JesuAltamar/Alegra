@@ -22,6 +22,11 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   List<dynamic> todasLasTareas = [];
   Map<String, dynamic> estadisticas = {};
   late AnimationController _fabAnimationController;
+  
+  // 🔥 OPTIMIZACIÓN: Cache para evitar recargas innecesarias
+  final Map<String, List<dynamic>> _tareasCache = {};
+  bool _isLoadingTareas = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -34,13 +39,14 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       vsync: this,
     );
     _loadData();
-    _loadAllTasks();
+    _loadAllTasksOptimized();
     _cargarRecordatoriosPendientes();
   }
 
   @override
   void dispose() {
     _fabAnimationController.dispose();
+    _debounceTimer?.cancel();
     RecordatorioScheduler.cancelarTodosLosRecordatorios();
     super.dispose();
   }
@@ -92,65 +98,135 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   }
 
   Future<void> _loadData() async {
+    if (_isLoadingTareas) return;
+    
     try {
+      setState(() => _isLoadingTareas = true);
+      
       final fecha = DateFormat("yyyy-MM-dd").format(_selectedDate);
-      final data = await ApiService.getTareas(fecha: fecha);
-      final stats = await ApiService.getEstadisticas();
-      setState(() {
-        tareas = data;
-        estadisticas = stats;
-      });
+      
+      // 🔥 Usar cache si está disponible
+      if (_tareasCache.containsKey(fecha)) {
+        setState(() {
+          tareas = _tareasCache[fecha]!;
+          _isLoadingTareas = false;
+        });
+      }
+      
+      // Cargar en paralelo tareas y estadísticas
+      final results = await Future.wait([
+        ApiService.getTareas(fecha: fecha),
+        ApiService.getEstadisticas(),
+      ]);
+      
+      if (mounted) {
+        setState(() {
+          tareas = results[0] as List<dynamic>;
+          estadisticas = results[1] as Map<String, dynamic>;
+          _tareasCache[fecha] = tareas; // Guardar en cache
+          _isLoadingTareas = false;
+        });
+      }
     } catch (e) {
-      if (e.toString().contains("401")) {
-        if (!mounted) return;
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error cargando tareas: $e"),
-            backgroundColor: Colors.red[400],
-          ),
-        );
+      if (mounted) {
+        setState(() => _isLoadingTareas = false);
+        
+        if (!e.toString().contains("401")) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error cargando tareas: $e"),
+              backgroundColor: Colors.red[400],
+            ),
+          );
+        }
       }
     }
   }
 
-  Future<void> _loadAllTasks() async {
+  // 🔥 OPTIMIZACIÓN: Carga progresiva de tareas del mes
+  Future<void> _loadAllTasksOptimized() async {
     try {
       final startOfMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
       final endOfMonth = DateTime(_focusedDay.year, _focusedDay.month + 1, 0);
 
       List<dynamic> allTasks = [];
-      for (int i = 0; i <= endOfMonth.day; i++) {
-        try {
-          final fecha = DateFormat(
-            "yyyy-MM-dd",
-          ).format(startOfMonth.add(Duration(days: i)));
-          final dayTasks = await ApiService.getTareas(fecha: fecha);
-          allTasks.addAll(dayTasks);
-        } catch (e) {
-          // Ignorar errores de días individuales
+      
+      // Cargar en lotes de 7 días para mejor performance
+      for (int batchStart = 0; batchStart <= endOfMonth.day; batchStart += 7) {
+        final futures = <Future<List<dynamic>>>[];
+        
+        for (int i = batchStart; i < batchStart + 7 && i <= endOfMonth.day; i++) {
+          final fecha = DateFormat("yyyy-MM-dd")
+              .format(startOfMonth.add(Duration(days: i)));
+          
+          // Usar cache si existe
+          if (_tareasCache.containsKey(fecha)) {
+            allTasks.addAll(_tareasCache[fecha]!);
+          } else {
+            futures.add(ApiService.getTareas(fecha: fecha));
+          }
         }
-      }
-
-      if (mounted) {
-        setState(() {
-          todasLasTareas = allTasks;
-        });
+        
+        if (futures.isNotEmpty) {
+          final results = await Future.wait(futures);
+          for (var dayTasks in results) {
+            allTasks.addAll(dayTasks);
+          }
+        }
+        
+        // Actualizar UI progresivamente
+        if (mounted) {
+          setState(() {
+            todasLasTareas = List.from(allTasks);
+          });
+        }
       }
     } catch (e) {
       debugPrint("Error cargando todas las tareas: $e");
     }
   }
 
+  // 🔥 OPTIMIZACIÓN: Toggle con actualización optimista
   Future<void> _toggleCompletar(int? id, bool completada) async {
     if (id == null) return;
 
+    // Actualización optimista: cambiar UI inmediatamente
+    setState(() {
+      final index = tareas.indexWhere((t) => t['id'] == id);
+      if (index != -1) {
+        tareas[index]['estado'] = completada ? 'completada' : 'pendiente';
+      }
+      
+      // Actualizar cache
+      final fecha = DateFormat("yyyy-MM-dd").format(_selectedDate);
+      _tareasCache[fecha] = List.from(tareas);
+      
+      // Actualizar estadísticas localmente
+      if (completada) {
+        estadisticas['completadas'] = _getStatValue('completadas') + 1;
+      } else {
+        estadisticas['completadas'] = _getStatValue('completadas') - 1;
+      }
+    });
+
     try {
       await ApiService.completarTarea(id, completada);
-      _loadData();
-      _loadAllTasks();
+      
+      // Recargar en segundo plano sin bloquear UI
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+        _loadData();
+        _loadAllTasksOptimized();
+      });
     } catch (e) {
+      // Revertir cambio si falla
+      setState(() {
+        final index = tareas.indexWhere((t) => t['id'] == id);
+        if (index != -1) {
+          tareas[index]['estado'] = completada ? 'pendiente' : 'completada';
+        }
+      });
+      
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -166,38 +242,48 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: const Text("Eliminar Tarea"),
-            content: const Text(
-              "¿Estás seguro? Esto también cancelará el recordatorio si existe.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancelar"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  "Eliminar",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text("Eliminar Tarea"),
+        content: const Text(
+          "¿Estás seguro? Esto también cancelará el recordatorio si existe.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancelar"),
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Eliminar",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
+      // Actualización optimista
+      setState(() {
+        tareas.removeWhere((t) => t['id'] == id);
+        todasLasTareas.removeWhere((t) => t['id'] == id);
+        
+        // Limpiar cache
+        final fecha = DateFormat("yyyy-MM-dd").format(_selectedDate);
+        _tareasCache[fecha] = List.from(tareas);
+      });
+
       try {
         RecordatorioScheduler.cancelarRecordatorio(id.toString());
         await ApiService.deleteTarea(id);
+        
         _loadData();
-        _loadAllTasks();
+        _loadAllTasksOptimized();
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -206,23 +292,34 @@ class _ListaTareasPageState extends State<ListaTareasPage>
             backgroundColor: Colors.red[400],
           ),
         );
+        
+        // Recargar para restaurar estado
+        _loadData();
       }
     }
   }
 
-  // 🆕 MOSTRAR MODAL CON TAREAS DE UNA FECHA ESPECÍFICA
   void _mostrarTareasDelDia(DateTime fecha) async {
     final fechaStr = DateFormat("yyyy-MM-dd").format(fecha);
     
     try {
-      final tareasDia = await ApiService.getTareas(fecha: fechaStr);
+      // Usar cache si existe
+      List<dynamic> tareasDia;
+      if (_tareasCache.containsKey(fechaStr)) {
+        tareasDia = _tareasCache[fechaStr]!;
+      } else {
+        tareasDia = await ApiService.getTareas(fecha: fechaStr);
+        _tareasCache[fechaStr] = tareasDia;
+      }
       
       if (!mounted) return;
       
       if (tareasDia.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("No hay tareas para ${DateFormat("d 'de' MMMM", "es_ES").format(fecha)}"),
+            content: Text(
+              "No hay tareas para ${DateFormat("d 'de' MMMM", "es_ES").format(fecha)}",
+            ),
             backgroundColor: const Color(0xFFFFA000),
             duration: const Duration(seconds: 2),
           ),
@@ -232,20 +329,28 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
       final screenWidth = MediaQuery.of(context).size.width;
       final isMobile = screenWidth <= 600;
+      final isTablet = screenWidth > 600 && screenWidth <= 1024;
 
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => Container(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height * (isMobile ? 0.75 : 0.65),
+          constraints: BoxConstraints(
+            maxWidth: isTablet ? 600 : 500,
+          ),
+          margin: isTablet || !isMobile 
+              ? EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width * 0.2,
+                )
+              : EdgeInsets.zero,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
           ),
           child: Column(
             children: [
-              // Handle bar
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(top: 12, bottom: 8),
@@ -258,7 +363,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                 ),
               ),
               
-              // Header
               Padding(
                 padding: EdgeInsets.all(isMobile ? 16 : 20),
                 child: Row(
@@ -304,7 +408,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
               
               const Divider(height: 1),
               
-              // Lista de tareas
               Expanded(
                 child: ListView.builder(
                   padding: EdgeInsets.all(isMobile ? 12 : 16),
@@ -353,7 +456,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         ),
         boxShadow: [
           BoxShadow(
-            color: (completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8)).withOpacity(0.1),
+            color: (completada ? const Color(0xFF4CAF50) : const Color(0xFF1A73E8))
+                .withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -429,25 +533,47 @@ class _ListaTareasPageState extends State<ListaTareasPage>
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.edit_outlined,
-              color: Color(0xFF1A73E8),
-              size: 20,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              if (id != null) {
-                _mostrarFormularioEditarTarea(t);
-              }
-            },
+          // 🆕 BOTONES DE EDITAR Y ELIMINAR
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: Color(0xFF1A73E8),
+                  size: 20,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (id != null) {
+                    _mostrarFormularioEditarTarea(t);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (id != null) {
+                    _deleteTarea(id);
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Métodos auxiliares para UI
   Color _getEventColor(List events) {
     if (events.isEmpty) return Colors.grey;
     bool hasCompleted = events.any(
@@ -521,24 +647,24 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  // 🆕 ESTADÍSTICAS COMPACTAS EN LÍNEA HORIZONTAL
   Widget _statBox(String label, int value, Color color, IconData icon) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withOpacity(0.3), width: 1.5),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 24),
+            Icon(icon, color: color, size: 22),
             const SizedBox(height: 8),
             Text(
               "$value",
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 22,
                 color: color,
                 fontWeight: FontWeight.bold,
               ),
@@ -552,6 +678,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -619,7 +747,13 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth <= 600;
+    final isTablet = screenWidth > 600 && screenWidth <= 1024;
+    final isDesktop = screenWidth > 1024;
     final recordatoriosActivos = RecordatorioScheduler.recordatoriosActivos;
+
+    // 🔥 OPTIMIZACIÓN: Responsive layout mejorado
+    final horizontalPadding = isMobile ? 16.0 : (isTablet ? 40.0 : 80.0);
+    final maxWidth = isDesktop ? 1200.0 : double.infinity;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -637,7 +771,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
               ),
             ),
             const SizedBox(width: 8),
-            // 🔔 CAMPANITA SIN EL NÚMERO 0
             if (recordatoriosActivos > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -682,178 +815,189 @@ class _ListaTareasPageState extends State<ListaTareasPage>
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 🆕 ESTADÍSTICAS EN UNA LÍNEA HORIZONTAL
-            Container(
-              margin: EdgeInsets.all(isMobile ? 16 : 20),
-              padding: EdgeInsets.all(isMobile ? 16 : 20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFE3F2FD),
-                    Colors.white,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1A73E8).withOpacity(0.1),
-                    blurRadius: 15,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
+      body: Center(
+        child: Container(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: Column(
                 children: [
-                  _statBox(
-                    "Completadas",
-                    _getStatValue("completadas"),
-                    const Color(0xFF4CAF50),
-                    Icons.check_circle,
-                  ),
-                  const SizedBox(width: 12),
-                  _statBox(
-                    "Total",
-                    _getStatValue("total"),
-                    const Color(0xFF1A73E8),
-                    Icons.list_alt,
-                  ),
-                  const SizedBox(width: 12),
-                  _statBox(
-                    "Recordatorios",
-                    _getStatValue("recordatorios"),
-                    const Color(0xFFFFA000),
-                    Icons.notifications,
-                  ),
-                ],
-              ),
-            ),
-            
-            // Calendario
-            Container(
-              margin: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
-              padding: EdgeInsets.all(isMobile ? 8 : 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: TableCalendar(
-                locale: 'es_ES',
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDate = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
-                  
-                  // 🆕 Mostrar modal con tareas si hay tareas en esa fecha
-                  final tareasDelDia = _getEventsForDay(selectedDay);
-                  if (tareasDelDia.isNotEmpty) {
-                    _mostrarTareasDelDia(selectedDay);
-                  } else {
-                    _loadData();
-                  }
-                },
-                onPageChanged: (focusedDay) {
-                  setState(() {
-                    _focusedDay = focusedDay;
-                  });
-                  _loadAllTasks();
-                },
-                eventLoader: (day) => _getEventsForDay(day),
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, day, events) {
-                    if (events.isNotEmpty) {
-                      return Positioned(
-                        right: 4,
-                        top: 4,
-                        child: Container(
-                          width: isMobile ? 6 : 8,
-                          height: isMobile ? 6 : 8,
-                          decoration: BoxDecoration(
-                            color: _getEventColor(events),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: _getEventColor(events).withOpacity(0.5),
-                                blurRadius: 3,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
+                  // Estadísticas optimizadas
+                  Container(
+                    margin: EdgeInsets.only(
+                      top: isMobile ? 16 : 24,
+                      bottom: isMobile ? 16 : 20,
+                    ),
+                    padding: EdgeInsets.all(isMobile ? 16 : 20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFFE3F2FD),
+                          Colors.white,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1A73E8).withOpacity(0.1),
+                          blurRadius: 15,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 5),
                         ),
-                      );
-                    }
-                    return null;
-                  },
-                ),
-                calendarStyle: CalendarStyle(
-                  selectedDecoration: const BoxDecoration(
-                    color: Color(0xFF1A73E8),
-                    shape: BoxShape.circle,
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _statBox(
+                          "Completadas",
+                          _getStatValue("completadas"),
+                          const Color(0xFF4CAF50),
+                          Icons.check_circle,
+                        ),
+                        SizedBox(width: isMobile ? 10 : 16),
+                        _statBox(
+                          "Total",
+                          _getStatValue("total"),
+                          const Color(0xFF1A73E8),
+                          Icons.list_alt,
+                        ),
+                        SizedBox(width: isMobile ? 10 : 16),
+                        _statBox(
+                          "Recordatorios",
+                          _getStatValue("recordatorios"),
+                          const Color(0xFFFFA000),
+                          Icons.notifications,
+                        ),
+                      ],
+                    ),
                   ),
-                  todayDecoration: const BoxDecoration(
-                    color: Color(0xFFFFA000),
-                    shape: BoxShape.circle,
+                  
+                  // Calendario optimizado
+                  Container(
+                    padding: EdgeInsets.all(isMobile ? 12 : 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: TableCalendar(
+                      locale: 'es_ES',
+                      firstDay: DateTime.utc(2020, 1, 1),
+                      lastDay: DateTime.utc(2030, 12, 31),
+                      focusedDay: _focusedDay,
+                      selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() {
+                          _selectedDate = selectedDay;
+                          _focusedDay = focusedDay;
+                        });
+                        
+                        final tareasDelDia = _getEventsForDay(selectedDay);
+                        if (tareasDelDia.isNotEmpty) {
+                          _mostrarTareasDelDia(selectedDay);
+                        } else {
+                          _loadData();
+                        }
+                      },
+                      onPageChanged: (focusedDay) {
+                        setState(() {
+                          _focusedDay = focusedDay;
+                        });
+                        _loadAllTasksOptimized();
+                      },
+                      eventLoader: (day) => _getEventsForDay(day),
+                      calendarBuilders: CalendarBuilders(
+                        markerBuilder: (context, day, events) {
+                          if (events.isNotEmpty) {
+                            return Positioned(
+                              right: isMobile ? 3 : 4,
+                              top: isMobile ? 3 : 4,
+                              child: Container(
+                                width: isMobile ? 6 : 7,
+                                height: isMobile ? 6 : 7,
+                                decoration: BoxDecoration(
+                                  color: _getEventColor(events),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _getEventColor(events).withOpacity(0.5),
+                                      blurRadius: 3,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          return null;
+                        },
+                      ),
+                      calendarStyle: CalendarStyle(
+                        selectedDecoration: const BoxDecoration(
+                          color: Color(0xFF1A73E8),
+                          shape: BoxShape.circle,
+                        ),
+                        todayDecoration: const BoxDecoration(
+                          color: Color(0xFFFFA000),
+                          shape: BoxShape.circle,
+                        ),
+                        weekendTextStyle: const TextStyle(
+                          color: Color(0xFFE53935),
+                          fontSize: 14,
+                        ),
+                        defaultTextStyle: const TextStyle(
+                          fontSize: 14,
+                        ),
+                        outsideDaysVisible: false,
+                        markersMaxCount: 1,
+                        cellMargin: EdgeInsets.all(isMobile ? 2 : 4),
+                        cellPadding: EdgeInsets.all(isMobile ? 0 : 2),
+                      ),
+                      headerStyle: HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
+                        titleTextStyle: TextStyle(
+                          fontSize: isMobile ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        leftChevronIcon: const Icon(
+                          Icons.chevron_left,
+                          color: Color(0xFF1A73E8),
+                        ),
+                        rightChevronIcon: const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF1A73E8),
+                        ),
+                        headerPadding: EdgeInsets.symmetric(
+                          vertical: isMobile ? 8 : 16,
+                        ),
+                      ),
+                      daysOfWeekStyle: DaysOfWeekStyle(
+                        weekdayStyle: TextStyle(fontSize: isMobile ? 11 : 13),
+                        weekendStyle: TextStyle(
+                          fontSize: isMobile ? 11 : 13,
+                          color: const Color(0xFFE53935),
+                        ),
+                      ),
+                      daysOfWeekHeight: isMobile ? 28 : 36,
+                      rowHeight: isMobile ? 44 : 50,
+                    ),
                   ),
-                  weekendTextStyle: const TextStyle(
-                    color: Color(0xFFE53935),
-                    fontSize: 14,
-                  ),
-                  defaultTextStyle: const TextStyle(
-                    fontSize: 14,
-                  ),
-                  outsideDaysVisible: false,
-                  markersMaxCount: 1,
-                  cellMargin: EdgeInsets.all(isMobile ? 3 : 4),
-                  cellPadding: EdgeInsets.all(isMobile ? 0 : 2),
-                ),
-                headerStyle: HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                  titleTextStyle: TextStyle(
-                    fontSize: isMobile ? 16 : 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  leftChevronIcon: const Icon(
-                    Icons.chevron_left,
-                    color: Color(0xFF1A73E8),
-                  ),
-                  rightChevronIcon: const Icon(
-                    Icons.chevron_right,
-                    color: Color(0xFF1A73E8),
-                  ),
-                  headerPadding: EdgeInsets.symmetric(vertical: isMobile ? 8 : 16),
-                ),
-                daysOfWeekStyle: DaysOfWeekStyle(
-                  weekdayStyle: TextStyle(fontSize: isMobile ? 11 : 14),
-                  weekendStyle: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFFE53935),
-                  ),
-                ),
-                daysOfWeekHeight: isMobile ? 30 : 40,
-                rowHeight: isMobile ? 48 : 52,
+                  SizedBox(height: isMobile ? 80 : 100),
+                ],
               ),
             ),
-            const SizedBox(height: 100),
-          ],
+          ),
         ),
       ),
       floatingActionButton: _buildFloatingActionButton(isMobile),
@@ -885,8 +1029,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       ),
     );
   }
-
- 
 
   // FORMULARIO PARA CREAR NUEVA TAREA
   Future<void> _mostrarFormularioNuevaTarea() async {
@@ -932,7 +1074,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Handle bar
                       Center(
                         child: Container(
                           width: 50,
@@ -945,7 +1086,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                       ),
                       const SizedBox(height: 20),
 
-                      // Header
                       Row(
                         children: [
                           Container(
@@ -978,7 +1118,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Título
                               _buildFormField(
                                 label: "Título",
                                 icon: Icons.title,
@@ -999,7 +1138,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                               ),
                               SizedBox(height: isMobile ? 16 : 20),
 
-                              // Descripción
                               _buildFormField(
                                 label: "Descripción",
                                 icon: Icons.description,
@@ -1016,7 +1154,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                               ),
                               SizedBox(height: isMobile ? 16 : 20),
 
-                              // Fecha
                               _buildFormField(
                                 label: "Fecha",
                                 icon: Icons.calendar_today,
@@ -1087,7 +1224,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                               ),
                               SizedBox(height: isMobile ? 16 : 20),
 
-                              // Prioridad y Categoría
                               isMobile
                                   ? Column(
                                       children: [
@@ -1237,7 +1373,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     ),
                               SizedBox(height: isMobile ? 20 : 30),
 
-                              // Sección de recordatorio por email
                               Container(
                                 padding: EdgeInsets.all(isMobile ? 16 : 20),
                                 decoration: BoxDecoration(
@@ -1288,7 +1423,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     if (recordatorioActivo) ...[
                                       SizedBox(height: isMobile ? 16 : 20),
 
-                                      // Campo de email
                                       _buildFormField(
                                         label: "Correo electrónico",
                                         icon: Icons.email_outlined,
@@ -1307,7 +1441,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                     if (v == null || v.isEmpty)
                                                       return "Campo requerido";
                                                     if (!RegExp(
-                                                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$'
                                                     ).hasMatch(v)) {
                                                       return "Email inválido";
                                                     }
@@ -1320,7 +1454,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       ),
                                       const SizedBox(height: 16),
 
-                                      // Fecha del recordatorio
                                       _buildFormField(
                                         label: "Fecha del recordatorio",
                                         icon: Icons.calendar_today,
@@ -1391,7 +1524,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       ),
                                       const SizedBox(height: 16),
 
-                                      // Hora del recordatorio
                                       _buildFormField(
                                         label: "Hora del recordatorio",
                                         icon: Icons.access_time,
@@ -1456,7 +1588,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                           ),
                         ),
                       ),
-                      // Botones
+                      
                       isMobile
                           ? Column(
                               children: [
@@ -1616,7 +1748,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     String? emailRecordatorio =
         tareaExistente['email_recordatorio']?.toString();
 
-    // Parsear fecha de recordatorio si existe
     if (tareaExistente['fecha_recordatorio'] != null) {
       try {
         fechaRecordatorio = DateTime.parse(
@@ -1656,7 +1787,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Handle bar
                       Center(
                         child: Container(
                           width: 50,
@@ -1669,7 +1799,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                       ),
                       const SizedBox(height: 20),
 
-                      // Header
                       Row(
                         children: [
                           Container(
@@ -1702,7 +1831,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Título
                               _buildFormField(
                                 label: "Título",
                                 icon: Icons.title,
@@ -1723,7 +1851,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                               ),
                               SizedBox(height: isMobile ? 16 : 20),
 
-                              // Descripción
                               _buildFormField(
                                 label: "Descripción",
                                 icon: Icons.description,
@@ -1741,7 +1868,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                               ),
                               SizedBox(height: isMobile ? 16 : 20),
 
-                              // Fecha
                               _buildFormField(
                                 label: "Fecha",
                                 icon: Icons.calendar_today,
@@ -1800,7 +1926,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                               ),
                               SizedBox(height: isMobile ? 16 : 20),
 
-                              // Prioridad y Categoría
                               isMobile
                                   ? Column(
                                       children: [
@@ -1950,7 +2075,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     ),
                               SizedBox(height: isMobile ? 20 : 30),
 
-                              // Sección de recordatorio
                               Container(
                                 padding: EdgeInsets.all(isMobile ? 16 : 20),
                                 decoration: BoxDecoration(
@@ -1993,7 +2117,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                     if (recordatorioActivo) ...[
                                       SizedBox(height: isMobile ? 16 : 20),
 
-                                      // Campo de email
                                       _buildFormField(
                                         label: "Correo electrónico",
                                         icon: Icons.email_outlined,
@@ -2013,7 +2136,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                                     if (v == null || v.isEmpty)
                                                       return "Campo requerido";
                                                     if (!RegExp(
-                                                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$'
                                                     ).hasMatch(v)) {
                                                       return "Email inválido";
                                                     }
@@ -2026,7 +2149,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                                       ),
                                       const SizedBox(height: 16),
 
-                                      // Fecha del recordatorio
                                       _buildFormField(
                                         label: "Fecha del recordatorio",
                                         icon: Icons.calendar_today,
@@ -2172,7 +2294,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
                           ),
                         ),
                       ),
-                      // Botones
+                      
                       isMobile
                           ? Column(
                               children: [
@@ -2306,7 +2428,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
   }) async {
     if (!formKey.currentState!.validate()) return;
 
-    // Validaciones de recordatorio
     if (recordatorioActivo) {
       if (fechaRecordatorio == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2327,7 +2448,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         return;
       }
 
-      // Validar fecha/hora no esté en el pasado
       final fechaHoraRecordatorio = DateTime(
         fechaRecordatorio.year,
         fechaRecordatorio.month,
@@ -2350,7 +2470,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
 
     try {
-      // Preparar datos
       final tareaData = {
         "titulo": titulo,
         "descripcion": descripcion,
@@ -2366,7 +2485,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
         "hora_recordatorio": recordatorioActivo ? horaRecordatorio : null,
       };
 
-      // Llamar API
       Map<String, dynamic> respuesta;
       if (esEdicion && tareaId != null) {
         RecordatorioScheduler.cancelarRecordatorio(tareaId.toString());
@@ -2377,10 +2495,8 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
       if (!mounted) return;
 
-      // 🔥 PROGRAMAR RECORDATORIO
       if (recordatorioActivo && respuesta['success'] == true) {
         try {
-          // Obtener tarea de la respuesta o usar los datos enviados
           final tareaParaRecordatorio = respuesta['tarea'] ?? {
             ...tareaData,
             'id': tareaId ?? 0,
@@ -2412,8 +2528,11 @@ class _ListaTareasPageState extends State<ListaTareasPage>
 
       if (mounted) {
         Navigator.pop(context);
+        
+        // Limpiar cache y recargar
+        _tareasCache.clear();
         _loadData();
-        _loadAllTasks();
+        _loadAllTasksOptimized();
 
         final accion = esEdicion ? "actualizada" : "creada";
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2437,7 +2556,6 @@ class _ListaTareasPageState extends State<ListaTareasPage>
     }
   }
 
-  // Helper methods para el formulario
   Widget _buildFormField({
     required String label,
     required IconData icon,
@@ -2498,8 +2616,7 @@ class _ListaTareasPageState extends State<ListaTareasPage>
       ),
       contentPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 16,
-        vertical: isMobile ? 10 : 12,
-      ),
+        vertical: isMobile ? 10 : 12),
     );
   }
 }
