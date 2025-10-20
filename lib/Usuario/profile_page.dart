@@ -141,6 +141,290 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _isLoadingImage = false);
     }
   }
+// Eliminar foto de perfil
+  Future<void> _deletePhoto() async {
+  try {
+    setState(() => _isLoadingImage = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (token != null) {
+      final response = await http.delete(
+        Uri.parse('https://backendproyecto-production-4a8d.up.railway.app/api/foto/delete'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        if (result['success'] == true) {
+          setState(() {
+            _webImage = null;
+            _avatarUrl = null;
+          });
+          _showSnackbar('Foto eliminada correctamente', mentalhealthGreen);
+        } else {
+          _showSnackbar(result['message'] ?? 'Error al eliminar', accentPink);
+        }
+      } else {
+        _showSnackbar('Error al eliminar foto', accentPink);
+      }
+    }
+  } catch (e) {
+    _showSnackbar('Error: $e', accentPink);
+  } finally {
+    setState(() => _isLoadingImage = false);
+  }
+}
+ void _showDeleteConfirmDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(maxWidth: 360),
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDarkMode ? cardDark : softWhite,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: accentPink.withOpacity(0.2),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: accentPink.withOpacity(0.2),
+                blurRadius: 30,
+                offset: Offset(0, 15),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: accentPink.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: accentPink.withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.delete_outline,
+                  size: 30,
+                  color: accentPink,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                '¿Eliminar foto?',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: isDarkMode ? softWhite : deepPurple,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '¿Estás seguro de que deseas eliminar tu foto de perfil?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDarkMode
+                      ? Colors.grey[300]
+                      : deepPurple.withOpacity(0.7),
+                ),
+              ),
+              SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: vibrantPurple.withOpacity(0.5),
+                          width: 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          color: isDarkMode ? softWhite : deepPurple,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [accentPink, accentPink.withOpacity(0.8)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accentPink.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.of(dialogContext).pop();
+                          await _deletePhoto();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Eliminar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void _showFullScreenImage() {
+  if (_avatarUrl == null && _webImage == null) return;
+
+  showDialog(
+    context: context,
+    barrierColor: Colors.black.withOpacity(0.9),
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(20),
+        child: Stack(
+          children: [
+            // Imagen en pantalla completa
+            Center(
+              child: InteractiveViewer(
+                child: _webImage != null
+                    ? Image.memory(_webImage!, fit: BoxFit.contain)
+                    : _avatarUrl != null
+                        ? Image.network(
+                            _avatarUrl!.startsWith('http')
+                                ? _avatarUrl!
+                                : 'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.error_outline,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                          )
+                        : SizedBox(),
+              ),
+            ),
+            // Botón cerrar
+            Positioned(
+              top: 20,
+              right: 20,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+            // Botón eliminar
+            if (_avatarUrl != null || _webImage != null)
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [accentPink, accentPink.withOpacity(0.8)],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentPink.withOpacity(0.4),
+                          blurRadius: 20,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showDeleteConfirmDialog();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      icon: Icon(Icons.delete_outline, color: Colors.white),
+                      label: Text(
+                        'Eliminar foto',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   void _showSnackbar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -498,10 +782,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     SizedBox(height: 24),
-                    Stack(
+                   Stack(
                       children: [
                         GestureDetector(
-                          onTap: _pickImage,
+                          onTap: (_avatarUrl != null || _webImage != null) 
+                              ? _showFullScreenImage  // Si hay foto, mostrar en pantalla completa
+                              : _pickImage,            // Si no hay foto, seleccionar nueva
                           child: Container(
                             width: isDesktop ? 220 : 180,
                             height: isDesktop ? 220 : 180,
@@ -522,6 +808,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: ClipOval(child: _buildImageWidget()),
                           ),
                         ),
+                        // Botón editar (esquina inferior derecha)
                         Positioned(
                           bottom: 8,
                           right: 8,
@@ -557,6 +844,43 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
+                        // Botón eliminar (esquina inferior izquierda) - solo si hay foto
+                        if (_avatarUrl != null || _webImage != null)
+                          Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: GestureDetector(
+                              onTap: _showDeleteConfirmDialog,
+                              child: Container(
+                                width: isDesktop ? 56 : 48,
+                                height: isDesktop ? 56 : 48,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [accentPink, accentPink.withOpacity(0.8)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  border: Border.all(
+                                    color: isDarkMode ? cardDark : softWhite,
+                                    width: 4,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accentPink.withOpacity(0.4),
+                                      blurRadius: 15,
+                                      offset: Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.white,
+                                  size: isDesktop ? 24 : 20,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     SizedBox(height: 32),
