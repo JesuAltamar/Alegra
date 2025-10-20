@@ -156,27 +156,50 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
   Widget _buildImageWidget() {
-    if (_isLoadingProfile || _isLoadingImage) {
-      return Center(
-        child: CircularProgressIndicator(color: vibrantPurple, strokeWidth: 3),
-      );
-    }
-
-    if (_webImage != null) {
-      return Image.memory(_webImage!, fit: BoxFit.cover);
-    } else if (_avatarUrl != null) {
-      return Image.network(
-        'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
-      );
-      
-    }
-    return _buildDefaultAvatar();
+  if (_isLoadingProfile || _isLoadingImage) {
+    return Center(
+      child: CircularProgressIndicator(color: vibrantPurple, strokeWidth: 3),
+    );
   }
 
+  if (_webImage != null) {
+    return Image.memory(_webImage!, fit: BoxFit.cover);
+  } else if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+    // ⬇️ SOLUCIÓN: Detectar si la URL ya es completa
+    String imageUrl;
+    if (_avatarUrl!.startsWith('http://') || _avatarUrl!.startsWith('https://')) {
+      // Ya es una URL completa de Cloudinary
+      imageUrl = _avatarUrl!;
+    } else {
+      // Es una ruta relativa del sistema antiguo
+      imageUrl = 'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl';
+    }
+    
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                : null,
+            color: vibrantPurple,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        print('❌ Error cargando imagen desde: $imageUrl');
+        print('Error: $error');
+        return _buildDefaultAvatar();
+      },
+    );
+  }
+  return _buildDefaultAvatar();
+}
+ 
   Widget _buildDefaultAvatar() {
     return Container(
       decoration: BoxDecoration(
