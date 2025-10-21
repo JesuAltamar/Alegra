@@ -674,98 +674,126 @@ class _UnifiedLoginPageState extends State<UnifiedLoginPage>
     );
   }
 
-  Widget _buildEmailField() {
+ Widget _buildEmailField() {
   final isSmallScreen = MediaQuery.of(context).size.width < 600;
+  bool _showSuggestions = false; // ⬅️ Variable local para controlar visibilidad
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-        child: TextFormField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          style: TextStyle(
-            fontSize: isSmallScreen ? 13 : 15,
-            color: isDarkMode ? softWhite : deepPurple,
-          ),
-          onTap: () {
-            // Mostrar sugerencias al hacer tap
-            if (_correosGuardados.isNotEmpty) {
-              setState(() {});
-            }
-          },
-          onChanged: (value) {
-            setState(() {}); // Actualizar sugerencias mientras escribe
-          },
-          decoration: InputDecoration(
-            labelText: "Email",
-            labelStyle: TextStyle(
-              color: isDarkMode ? Colors.grey[400] : Color(0xFF64748B),
-              fontSize: isSmallScreen ? 12 : 14,
-            ),
-            prefixIcon: Container(
-              margin: const EdgeInsets.all(8),
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: (isDarkMode ? vibrantPurple : deepPurple).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
+  return StatefulBuilder(
+    builder: (context, setLocalState) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+            child: TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 13 : 15,
+                color: isDarkMode ? softWhite : deepPurple,
               ),
-              child: Icon(
-                Icons.email_rounded,
-                color: isDarkMode ? vibrantPurple : deepPurple,
-                size: isSmallScreen ? 16 : 18,
-              ),
-            ),
-            filled: true,
-            fillColor:
-                isDarkMode
-                    ? cardDark.withOpacity(0.8)
-                    : Colors.white.withOpacity(0.95),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-              borderSide: BorderSide(
-                color:
+              onTap: () {
+                // Mostrar sugerencias al hacer clic en el campo
+                if (_correosGuardados.isNotEmpty) {
+                  setLocalState(() {
+                    _showSuggestions = true;
+                  });
+                }
+              },
+              onChanged: (value) {
+                setLocalState(() {
+                  _showSuggestions = value.isEmpty && _correosGuardados.isNotEmpty;
+                });
+              },
+              decoration: InputDecoration(
+                labelText: "Email",
+                labelStyle: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Color(0xFF64748B),
+                  fontSize: isSmallScreen ? 12 : 14,
+                ),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: (isDarkMode ? vibrantPurple : deepPurple).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.email_rounded,
+                    color: isDarkMode ? vibrantPurple : deepPurple,
+                    size: isSmallScreen ? 16 : 18,
+                  ),
+                ),
+                // ⬇️ Nuevo: Icono para mostrar/ocultar sugerencias
+                suffixIcon: _correosGuardados.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          _showSuggestions
+                              ? Icons.arrow_drop_up
+                              : Icons.arrow_drop_down,
+                          color: isDarkMode ? Colors.grey[400] : Color(0xFF64748B),
+                        ),
+                        onPressed: () {
+                          setLocalState(() {
+                            _showSuggestions = !_showSuggestions;
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor:
                     isDarkMode
-                        ? Colors.white.withOpacity(0.2)
-                        : Colors.grey.withOpacity(0.15),
-                width: 1,
+                        ? cardDark.withOpacity(0.8)
+                        : Colors.white.withOpacity(0.95),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                  borderSide: BorderSide(
+                    color:
+                        isDarkMode
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                  borderSide: BorderSide(
+                    color:
+                        isDarkMode
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                  borderSide: BorderSide(
+                    color: isDarkMode ? vibrantPurple : deepPurple,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 14 : 16,
+                ),
               ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-              borderSide: BorderSide(
-                color:
-                    isDarkMode
-                        ? Colors.white.withOpacity(0.2)
-                        : Colors.grey.withOpacity(0.15),
-                width: 1,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-              borderSide: BorderSide(
-                color: isDarkMode ? vibrantPurple : deepPurple,
-                width: 2,
-              ),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 12 : 16,
-              vertical: isSmallScreen ? 14 : 16,
             ),
           ),
-        ),
-      ),
-      
-      // ⬇️ LISTA DE CORREOS GUARDADOS
-      if (_correosGuardados.isNotEmpty && _emailController.text.isEmpty)
-        _buildEmailSuggestions(isSmallScreen),
-    ],
+          
+          // ⬇️ DROPDOWN: Solo se muestra cuando _showSuggestions es true
+          if (_showSuggestions && _correosGuardados.isNotEmpty)
+            _buildEmailSuggestions(isSmallScreen, () {
+              setLocalState(() {
+                _showSuggestions = false;
+              });
+            }),
+        ],
+      );
+    },
   );
 }
-
 // ⬇️ NUEVA FUNCIÓN: Lista de sugerencias de correos
-Widget _buildEmailSuggestions(bool isSmallScreen) {
+Widget _buildEmailSuggestions(bool isSmallScreen, VoidCallback onClose) {
   // Filtrar correos que coincidan con lo que está escribiendo
   final filteredEmails = _emailController.text.isEmpty
       ? _correosGuardados
@@ -818,15 +846,28 @@ Widget _buildEmailSuggestions(bool isSmallScreen) {
                 ),
               ),
               SizedBox(width: 8),
-              Text(
-                'Correos guardados',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode 
-                      ? Colors.grey[300] 
-                      : Color(0xFF64748B),
+              Expanded(
+                child: Text(
+                  'Correos guardados',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode 
+                        ? Colors.grey[300] 
+                        : Color(0xFF64748B),
+                  ),
                 ),
+              ),
+              // ⬇️ Botón para cerrar
+              IconButton(
+                icon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: isDarkMode ? Colors.grey[400] : Color(0xFF64748B),
+                ),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
+                onPressed: onClose,
               ),
             ],
           ),
@@ -846,21 +887,21 @@ Widget _buildEmailSuggestions(bool isSmallScreen) {
           itemCount: filteredEmails.length > 3 ? 3 : filteredEmails.length,
           itemBuilder: (context, index) {
             final email = filteredEmails[index];
-            return _buildEmailItem(email, isSmallScreen);
+            return _buildEmailItem(email, isSmallScreen, onClose);
           },
         ),
       ],
     ),
   );
 }
-
 // ⬇️ NUEVA FUNCIÓN: Item individual de correo
-Widget _buildEmailItem(String email, bool isSmallScreen) {
+Widget _buildEmailItem(String email, bool isSmallScreen, VoidCallback onClose) {
   return InkWell(
     onTap: () {
       setState(() {
         _emailController.text = email;
       });
+      onClose(); // ⬅️ Cerrar dropdown al seleccionar
     },
     child: Container(
       padding: EdgeInsets.symmetric(
@@ -952,7 +993,6 @@ Widget _buildEmailItem(String email, bool isSmallScreen) {
     ),
   );
 }
-
   Widget _buildUserField() {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
