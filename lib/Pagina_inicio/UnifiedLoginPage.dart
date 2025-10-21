@@ -675,76 +675,283 @@ class _UnifiedLoginPageState extends State<UnifiedLoginPage>
   }
 
   Widget _buildEmailField() {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+  final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-      child: TextFormField(
-        controller: _emailController,
-        keyboardType: TextInputType.emailAddress,
-        style: TextStyle(
-          fontSize: isSmallScreen ? 13 : 15,
-          color: isDarkMode ? softWhite : deepPurple,
-        ),
-        decoration: InputDecoration(
-          labelText: "Email",
-          labelStyle: TextStyle(
-            color: isDarkMode ? Colors.grey[400] : Color(0xFF64748B),
-            fontSize: isSmallScreen ? 12 : 14,
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+        child: TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 13 : 15,
+            color: isDarkMode ? softWhite : deepPurple,
           ),
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: (isDarkMode ? vibrantPurple : deepPurple).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+          onTap: () {
+            // Mostrar sugerencias al hacer tap
+            if (_correosGuardados.isNotEmpty) {
+              setState(() {});
+            }
+          },
+          onChanged: (value) {
+            setState(() {}); // Actualizar sugerencias mientras escribe
+          },
+          decoration: InputDecoration(
+            labelText: "Email",
+            labelStyle: TextStyle(
+              color: isDarkMode ? Colors.grey[400] : Color(0xFF64748B),
+              fontSize: isSmallScreen ? 12 : 14,
             ),
-            child: Icon(
-              Icons.email_rounded,
-              color: isDarkMode ? vibrantPurple : deepPurple,
-              size: isSmallScreen ? 16 : 18,
+            prefixIcon: Container(
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: (isDarkMode ? vibrantPurple : deepPurple).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                Icons.email_rounded,
+                color: isDarkMode ? vibrantPurple : deepPurple,
+                size: isSmallScreen ? 16 : 18,
+              ),
             ),
-          ),
-          filled: true,
-          fillColor:
-              isDarkMode
-                  ? cardDark.withOpacity(0.8)
-                  : Colors.white.withOpacity(0.95),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-            borderSide: BorderSide(
-              color:
-                  isDarkMode
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.15),
-              width: 1,
+            filled: true,
+            fillColor:
+                isDarkMode
+                    ? cardDark.withOpacity(0.8)
+                    : Colors.white.withOpacity(0.95),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+              borderSide: BorderSide(
+                color:
+                    isDarkMode
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.15),
+                width: 1,
+              ),
             ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-            borderSide: BorderSide(
-              color:
-                  isDarkMode
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.15),
-              width: 1,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+              borderSide: BorderSide(
+                color:
+                    isDarkMode
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.15),
+                width: 1,
+              ),
             ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-            borderSide: BorderSide(
-              color: isDarkMode ? vibrantPurple : deepPurple,
-              width: 2,
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+              borderSide: BorderSide(
+                color: isDarkMode ? vibrantPurple : deepPurple,
+                width: 2,
+              ),
             ),
-          ),
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 12 : 16,
-            vertical: isSmallScreen ? 14 : 16,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : 16,
+              vertical: isSmallScreen ? 14 : 16,
+            ),
           ),
         ),
       ),
-    );
-  }
+      
+      // ⬇️ LISTA DE CORREOS GUARDADOS
+      if (_correosGuardados.isNotEmpty && _emailController.text.isEmpty)
+        _buildEmailSuggestions(isSmallScreen),
+    ],
+  );
+}
+
+// ⬇️ NUEVA FUNCIÓN: Lista de sugerencias de correos
+Widget _buildEmailSuggestions(bool isSmallScreen) {
+  // Filtrar correos que coincidan con lo que está escribiendo
+  final filteredEmails = _emailController.text.isEmpty
+      ? _correosGuardados
+      : _correosGuardados
+          .where((email) =>
+              email.toLowerCase().contains(_emailController.text.toLowerCase()))
+          .toList();
+
+  if (filteredEmails.isEmpty) return SizedBox.shrink();
+
+  return Container(
+    margin: EdgeInsets.only(bottom: 16),
+    decoration: BoxDecoration(
+      color: isDarkMode 
+          ? cardDark.withOpacity(0.6) 
+          : Colors.white.withOpacity(0.9),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: isDarkMode 
+            ? Colors.white.withOpacity(0.1) 
+            : Colors.grey.withOpacity(0.2),
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.08),
+          blurRadius: 12,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Encabezado
+        Padding(
+          padding: EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: vibrantPurple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.history,
+                  size: 16,
+                  color: vibrantPurple,
+                ),
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Correos guardados',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode 
+                      ? Colors.grey[300] 
+                      : Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        Divider(
+          height: 1,
+          color: isDarkMode 
+              ? Colors.white.withOpacity(0.1) 
+              : Colors.grey.withOpacity(0.2),
+        ),
+        
+        // Lista de correos
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: filteredEmails.length > 3 ? 3 : filteredEmails.length,
+          itemBuilder: (context, index) {
+            final email = filteredEmails[index];
+            return _buildEmailItem(email, isSmallScreen);
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+// ⬇️ NUEVA FUNCIÓN: Item individual de correo
+Widget _buildEmailItem(String email, bool isSmallScreen) {
+  return InkWell(
+    onTap: () {
+      setState(() {
+        _emailController.text = email;
+      });
+    },
+    child: Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDarkMode 
+                ? Colors.white.withOpacity(0.05) 
+                : Colors.grey.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Avatar circular con inicial
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  vibrantPurple.withOpacity(0.8),
+                  lightPurple.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Center(
+              child: Text(
+                email[0].toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          
+          SizedBox(width: 12),
+          
+          // Email
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  email,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 13 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? softWhite : deepPurple,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Cuenta guardada',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDarkMode 
+                        ? Colors.grey[400] 
+                        : Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Icono de verificación
+          Container(
+            padding: EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: mentalhealthGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              Icons.check_circle_outline,
+              size: 18,
+              color: mentalhealthGreen,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildUserField() {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
