@@ -99,6 +99,238 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // 📸 MODAL PROFESIONAL PARA ELEGIR ACCIÓN
+  void _showPhotoOptionsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? cardDark : softWhite,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: vibrantPurple.withOpacity(0.3),
+                blurRadius: 30,
+                offset: Offset(0, -10),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Barra superior
+                Container(
+                  margin: EdgeInsets.only(top: 12, bottom: 8),
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isDarkMode 
+                        ? Colors.grey[600] 
+                        : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                
+                // Título
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: vibrantPurple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.photo_camera_rounded,
+                          color: vibrantPurple,
+                          size: 24,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Foto de perfil',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: isDarkMode ? softWhite : deepPurple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      // Botón: Ver foto completa (solo si hay foto)
+                      if (_avatarUrl != null || _webImage != null)
+                        _buildModalOption(
+                          icon: Icons.visibility_rounded,
+                          title: 'Ver foto completa',
+                          subtitle: 'Ampliar imagen con zoom',
+                          color: lightPurple,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showFullScreenImage();
+                          },
+                        ),
+                      
+                      if (_avatarUrl != null || _webImage != null)
+                        SizedBox(height: 12),
+                      
+                      // Botón: Cambiar/Subir foto
+                      _buildModalOption(
+                        icon: Icons.upload_rounded,
+                        title: (_avatarUrl != null || _webImage != null) 
+                            ? 'Cambiar foto' 
+                            : 'Subir foto',
+                        subtitle: 'Seleccionar de galería',
+                        color: vibrantPurple,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickImage();
+                        },
+                      ),
+                      
+                      // Botón: Eliminar foto (solo si hay foto)
+                      if (_avatarUrl != null || _webImage != null) ...[
+                        SizedBox(height: 12),
+                        _buildModalOption(
+                          icon: Icons.delete_outline_rounded,
+                          title: 'Eliminar foto',
+                          subtitle: 'Quitar foto de perfil',
+                          color: accentPink,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showDeleteConfirmDialog();
+                          },
+                        ),
+                      ],
+                      
+                      SizedBox(height: 12),
+                      
+                      // Botón: Cancelar
+                      OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: isDarkMode 
+                                ? Colors.grey[600]! 
+                                : Colors.grey[300]!,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Cancelar',
+                            style: TextStyle(
+                              color: isDarkMode ? softWhite : deepPurple,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Opción del modal
+  Widget _buildModalOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDarkMode 
+              ? color.withOpacity(0.1) 
+              : color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isDarkMode ? softWhite : deepPurple,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDarkMode 
+                          ? Colors.grey[400] 
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: color,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickImage() async {
     try {
       setState(() => _isLoadingImage = true);
@@ -141,290 +373,242 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _isLoadingImage = false);
     }
   }
-// Eliminar foto de perfil
+
   Future<void> _deletePhoto() async {
-  try {
-    setState(() => _isLoadingImage = true);
+    try {
+      setState(() => _isLoadingImage = true);
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
 
-    if (token != null) {
-      final response = await http.delete(
-        Uri.parse('https://backendproyecto-production-4a8d.up.railway.app/api/foto/delete'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      if (token != null) {
+        final response = await http.delete(
+          Uri.parse('https://backendproyecto-production-4a8d.up.railway.app/api/foto/delete'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
 
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        if (result['success'] == true) {
-          setState(() {
-            _webImage = null;
-            _avatarUrl = null;
-          });
-          _showSnackbar('Foto eliminada correctamente', mentalhealthGreen);
+        if (response.statusCode == 200) {
+          final result = jsonDecode(response.body);
+          if (result['success'] == true) {
+            setState(() {
+              _webImage = null;
+              _avatarUrl = null;
+            });
+            _showSnackbar('Foto eliminada correctamente', mentalhealthGreen);
+          } else {
+            _showSnackbar(result['message'] ?? 'Error al eliminar', accentPink);
+          }
         } else {
-          _showSnackbar(result['message'] ?? 'Error al eliminar', accentPink);
+          _showSnackbar('Error al eliminar foto', accentPink);
         }
-      } else {
-        _showSnackbar('Error al eliminar foto', accentPink);
       }
+    } catch (e) {
+      _showSnackbar('Error: $e', accentPink);
+    } finally {
+      setState(() => _isLoadingImage = false);
     }
-  } catch (e) {
-    _showSnackbar('Error: $e', accentPink);
-  } finally {
-    setState(() => _isLoadingImage = false);
   }
-}
- void _showDeleteConfirmDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext dialogContext) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: BoxConstraints(maxWidth: 360),
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isDarkMode ? cardDark : softWhite,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: accentPink.withOpacity(0.2),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
+
+  void _showDeleteConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: 360),
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDarkMode ? cardDark : softWhite,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
                 color: accentPink.withOpacity(0.2),
-                blurRadius: 30,
-                offset: Offset(0, 15),
+                width: 2,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: accentPink.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: accentPink.withOpacity(0.3),
-                    width: 2,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: accentPink.withOpacity(0.2),
+                  blurRadius: 30,
+                  offset: Offset(0, 15),
                 ),
-                child: Icon(
-                  Icons.delete_outline,
-                  size: 30,
-                  color: accentPink,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                '¿Eliminar foto?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: isDarkMode ? softWhite : deepPurple,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                '¿Estás seguro de que deseas eliminar tu foto de perfil?',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDarkMode
-                      ? Colors.grey[300]
-                      : deepPurple.withOpacity(0.7),
-                ),
-              ),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: vibrantPurple.withOpacity(0.5),
-                          width: 2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: Text(
-                        'Cancelar',
-                        style: TextStyle(
-                          color: isDarkMode ? softWhite : deepPurple,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: accentPink.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: accentPink.withOpacity(0.3),
+                      width: 2,
                     ),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [accentPink, accentPink.withOpacity(0.8)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentPink.withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: Offset(0, 6),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 30,
+                    color: accentPink,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  '¿Eliminar foto?',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: isDarkMode ? softWhite : deepPurple,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '¿Estás seguro de que deseas eliminar tu foto de perfil?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode
+                        ? Colors.grey[300]
+                        : deepPurple.withOpacity(0.7),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: vibrantPurple.withOpacity(0.5),
+                            width: 2,
                           ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          Navigator.of(dialogContext).pop();
-                          await _deletePhoto();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: EdgeInsets.symmetric(vertical: 12),
-                          elevation: 0,
                         ),
                         child: Text(
-                          'Eliminar',
+                          'Cancelar',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: isDarkMode ? softWhite : deepPurple,
                             fontSize: 15,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [accentPink, accentPink.withOpacity(0.8)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentPink.withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.of(dialogContext).pop();
+                            await _deletePhoto();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Eliminar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFullScreenImage() {
+    if (_avatarUrl == null && _webImage == null) return;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.all(20),
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  child: _webImage != null
+                      ? Image.memory(_webImage!, fit: BoxFit.contain)
+                      : _avatarUrl != null
+                          ? Image.network(
+                              _avatarUrl!.startsWith('http')
+                                  ? _avatarUrl!
+                                  : 'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl',
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.error_outline,
+                                color: Colors.white,
+                                size: 48,
+                              ),
+                            )
+                          : SizedBox(),
+                ),
+              ),
+              Positioned(
+                top: 20,
+                right: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
-      );
-    },
-  );
-}
-
-void _showFullScreenImage() {
-  if (_avatarUrl == null && _webImage == null) return;
-
-  showDialog(
-    context: context,
-    barrierColor: Colors.black.withOpacity(0.9),
-    builder: (BuildContext context) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(20),
-        child: Stack(
-          children: [
-            // Imagen en pantalla completa
-            Center(
-              child: InteractiveViewer(
-                child: _webImage != null
-                    ? Image.memory(_webImage!, fit: BoxFit.contain)
-                    : _avatarUrl != null
-                        ? Image.network(
-                            _avatarUrl!.startsWith('http')
-                                ? _avatarUrl!
-                                : 'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl',
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.error_outline,
-                              color: Colors.white,
-                              size: 48,
-                            ),
-                          )
-                        : SizedBox(),
-              ),
-            ),
-            // Botón cerrar
-            Positioned(
-              top: 20,
-              right: 20,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-            // Botón eliminar
-            if (_avatarUrl != null || _webImage != null)
-              Positioned(
-                bottom: 20,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [accentPink, accentPink.withOpacity(0.8)],
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: accentPink.withOpacity(0.4),
-                          blurRadius: 20,
-                          offset: Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showDeleteConfirmDialog();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      icon: Icon(Icons.delete_outline, color: Colors.white),
-                      label: Text(
-                        'Eliminar foto',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   void _showSnackbar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -440,49 +624,47 @@ void _showFullScreenImage() {
       ),
     );
   }
-  Widget _buildImageWidget() {
-  if (_isLoadingProfile || _isLoadingImage) {
-    return Center(
-      child: CircularProgressIndicator(color: vibrantPurple, strokeWidth: 3),
-    );
-  }
 
-  if (_webImage != null) {
-    return Image.memory(_webImage!, fit: BoxFit.cover);
-  } else if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
-    // ⬇️ SOLUCIÓN: Detectar si la URL ya es completa
-    String imageUrl;
-    if (_avatarUrl!.startsWith('http://') || _avatarUrl!.startsWith('https://')) {
-      // Ya es una URL completa de Cloudinary
-      imageUrl = _avatarUrl!;
-    } else {
-      // Es una ruta relativa del sistema antiguo
-      imageUrl = 'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl';
+  Widget _buildImageWidget() {
+    if (_isLoadingProfile || _isLoadingImage) {
+      return Center(
+        child: CircularProgressIndicator(color: vibrantPurple, strokeWidth: 3),
+      );
     }
-    
-    return Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: CircularProgressIndicator(
-            value: loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                : null,
-            color: vibrantPurple,
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        print('❌ Error cargando imagen desde: $imageUrl');
-        print('Error: $error');
-        return _buildDefaultAvatar();
-      },
-    );
+
+    if (_webImage != null) {
+      return Image.memory(_webImage!, fit: BoxFit.cover);
+    } else if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      String imageUrl;
+      if (_avatarUrl!.startsWith('http://') || _avatarUrl!.startsWith('https://')) {
+        imageUrl = _avatarUrl!;
+      } else {
+        imageUrl = 'https://backendproyecto-production-4a8d.up.railway.app$_avatarUrl';
+      }
+      
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+              color: vibrantPurple,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ Error cargando imagen desde: $imageUrl');
+          print('Error: $error');
+          return _buildDefaultAvatar();
+        },
+      );
+    }
+    return _buildDefaultAvatar();
   }
-  return _buildDefaultAvatar();
-}
  
   Widget _buildDefaultAvatar() {
     return Container(
@@ -689,7 +871,7 @@ void _showFullScreenImage() {
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
-                    color: vibrantPurple.withOpacity(0.3),
+                   color: vibrantPurple.withOpacity(0.3),
                     blurRadius: 8,
                     offset: Offset(0, 4),
                   ),
@@ -782,12 +964,14 @@ void _showFullScreenImage() {
                       ),
                     ),
                     SizedBox(height: 24),
-                   Stack(
+                    
+                    // ⬇️ AVATAR CON BOTÓN ÚNICO PARA ABRIR MODAL
+                    Stack(
                       children: [
                         GestureDetector(
                           onTap: (_avatarUrl != null || _webImage != null) 
-                              ? _showFullScreenImage  // Si hay foto, mostrar en pantalla completa
-                              : _pickImage,            // Si no hay foto, seleccionar nueva
+                              ? _showFullScreenImage  // Si hay foto, ver completa
+                              : _showPhotoOptionsModal, // Si no hay, abrir modal
                           child: Container(
                             width: isDesktop ? 220 : 180,
                             height: isDesktop ? 220 : 180,
@@ -808,12 +992,13 @@ void _showFullScreenImage() {
                             child: ClipOval(child: _buildImageWidget()),
                           ),
                         ),
-                        // Botón editar (esquina inferior derecha)
+                        
+                        // ⬇️ BOTÓN ÚNICO: Abre el modal de opciones
                         Positioned(
                           bottom: 8,
                           right: 8,
                           child: GestureDetector(
-                            onTap: _pickImage,
+                            onTap: _showPhotoOptionsModal, // ⬅️ Abre modal
                             child: Container(
                               width: isDesktop ? 56 : 48,
                               height: isDesktop ? 56 : 48,
@@ -844,45 +1029,9 @@ void _showFullScreenImage() {
                             ),
                           ),
                         ),
-                        // Botón eliminar (esquina inferior izquierda) - solo si hay foto
-                        if (_avatarUrl != null || _webImage != null)
-                          Positioned(
-                            bottom: 8,
-                            left: 8,
-                            child: GestureDetector(
-                              onTap: _showDeleteConfirmDialog,
-                              child: Container(
-                                width: isDesktop ? 56 : 48,
-                                height: isDesktop ? 56 : 48,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [accentPink, accentPink.withOpacity(0.8)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  border: Border.all(
-                                    color: isDarkMode ? cardDark : softWhite,
-                                    width: 4,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accentPink.withOpacity(0.4),
-                                      blurRadius: 15,
-                                      offset: Offset(0, 6),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.white,
-                                  size: isDesktop ? 24 : 20,
-                                ),
-                              ),
-                            ),
-                          ),
                       ],
                     ),
+                    
                     SizedBox(height: 32),
                     WeeklyStreakWidget(
                       userId: widget.usuarioId,
